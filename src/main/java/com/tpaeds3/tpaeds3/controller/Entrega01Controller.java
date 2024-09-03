@@ -29,7 +29,6 @@ import com.opencsv.exceptions.CsvValidationException;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 
@@ -39,14 +38,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Entrega 01: ")
 public class Entrega01Controller {
    
-    @PostMapping("/uploadCSV")
-    @Operation(summary = "Faz upload de um arquivo CSV", description = "Este endpoint permite o upload de um arquivo CSV.")
-    /*@ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Arquivo CSV processado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Arquivo CSV inválido"),
-            @ApiResponse(responseCode = "500", description = "Erro ao processar arquivo")
-    })*/
-    public ResponseEntity<Resource> uploadCSV(@RequestParam("file") MultipartFile file) {
+    @PostMapping("/convertCSVToBinary")
+    public ResponseEntity<Resource> convertCSVToBinary(@RequestParam("file") MultipartFile file) {
     if (file.isEmpty()) {
         return ResponseEntity.badRequest().body(null);
     }
@@ -92,9 +85,11 @@ public class Entrega01Controller {
             String[] line;
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy"); // 
             reader.skip(1); // Pula o cabeçalho
+            
 
             while ((line = reader.readNext()) != null) {
                 Movie movie = new Movie();
+                movie.fromByteArray(b);
                 movie.setId(Integer.parseInt(line[0]));
                 movie.setName(line[1]);
                 try {

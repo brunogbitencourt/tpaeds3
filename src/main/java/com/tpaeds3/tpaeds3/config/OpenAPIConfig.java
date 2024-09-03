@@ -42,24 +42,24 @@ public class OpenAPIConfig {
             String path = handlerMethod.getMethod().getName();
             if (path != null) {
                 switch (path) {
-                    case "uploadCSV" -> {
-                        operation.setSummary("Faz upload de um arquivo CSV");
-                        operation.setDescription("Este endpoint permite o upload de um arquivo CSV.");
+                    case "convertCSVToBinary" -> {
+                        operation.setSummary("Converts a CSV file to binary file");
+                        operation.setDescription("This end point allows a conversion of a movie.csv file to movie.db file.");
                         Schema<?> fileSchema = new Schema<>()
                                 .type("object")
                                 .addProperties("file", new Schema<>()
                                         .type("string")
                                         .format("binary"));
                         operation.setRequestBody(new RequestBody()
-                                .description("Arquivo CSV a ser carregado")
+                                .description("CSV File")
                                 .required(true)
                                 .content(new Content()
                                         .addMediaType("multipart/form-data", new MediaType()
                                                 .schema(fileSchema))));
                         operation.setResponses(new ApiResponses()
-                                .addApiResponse("200", new ApiResponse().description("Arquivo CSV processado com sucesso"))
-                                .addApiResponse("400", new ApiResponse().description("Arquivo CSV inválido"))
-                                .addApiResponse("500", new ApiResponse().description("Erro ao processar arquivo")));
+                                .addApiResponse("200", new ApiResponse().description("Binary File created successfully."))
+                                .addApiResponse("400", new ApiResponse().description("Invalid CSV file."))
+                                .addApiResponse("500", new ApiResponse().description("Error on processing file.")));
                     }
                     default -> {
                     }
