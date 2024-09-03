@@ -1,5 +1,12 @@
 package com.tpaeds3.tpaeds3.model;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 
@@ -18,7 +25,7 @@ public class Movie {
     private double budget;
     private double revenue;
     private String country;
-    
+
     public int getId() {
         return id;
     }
@@ -98,6 +105,80 @@ public class Movie {
         this.country = country;
     }  
 
+
+    public byte[] toByteArray() throws IOException{
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        DataOutputStream dos = new DataOutputStream(baos);
+        dos.writeInt(this.id);
+        dos.writeUTF(this.name);
+
+        // Convert data to string (yyyy-MM-dd easier to sort)
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        dos.writeUTF(df.format(this.date));       
+
+        dos.writeDouble(this.score);
+
+        // Write count element of genre list
+        // Write each element of the list        
+        dos.writeInt(this.genre.size());
+        for(String s : this.genre){
+            dos.writeUTF(s);
+        }
+
+        dos.writeUTF(this.overview);
+        
+        // Write count element of crew list
+        // Write each element of the list
+        dos.writeInt(this.crew.size());
+        for(String s : this.crew){
+            dos.writeUTF(s);
+        }
+
+        dos.writeUTF(this.originTitle);
+        dos.writeUTF(this.status);
+        dos.writeUTF(this.originLang);
+        dos.writeDouble(this.budget);
+        dos.writeDouble(this.revenue);
+        dos.writeUTF(this.country);     
+
+        return baos.toByteArray();
+    }
+
+    public void fromByteArray(byte[] b) throws IOException{
+        ByteArrayInputStream bais = new ByteArrayInputStream(b);
+        DataInputStream dis = new DataInputStream(bais);
+
+        this.id = dis.readInt();
+        this.name = dis.readUTF();
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
+        try {
+            this.date = df.parse(dis.readUTF());
+        } catch (ParseException e) {
+            System.err.println("Error: Parse Date");
+        }
+
+        this.score = dis.readDouble();
+
+        // Read size of list and add genSize elements to it
+        int genSize = dis.readInt();
+        for(int i=0; i<genSize; i++){
+            this.genre.add(dis.readUTF());
+        }
+
+        this.overview = dis.readUTF();
+
+        int crewSize = dis.readInt();
+        for(int i=0; i<crewSize; i++){
+            this.crew.add(dis.readUTF());
+        }
+
+        this.originTitle = dis.readUTF();
+        this.status = dis.readUTF();
+        this.originLang = dis.readUTF();
+        this.budget = dis.readDouble();
+        this.revenue = dis.readDouble();
+        this.country = dis.readUTF();
+    }
 
     
 }
