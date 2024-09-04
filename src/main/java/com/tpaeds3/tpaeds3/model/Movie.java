@@ -7,6 +7,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -150,6 +151,7 @@ public class Movie {
 
         this.id = dis.readInt();
         this.name = dis.readUTF();
+
         SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
         try {
             this.date = df.parse(dis.readUTF());
@@ -159,7 +161,8 @@ public class Movie {
 
         this.score = dis.readDouble();
 
-        // Read size of list and add genSize elements to it
+        // Initialize lists before using them
+        this.genre = new ArrayList<>();
         int genSize = dis.readInt();
         for(int i=0; i<genSize; i++){
             this.genre.add(dis.readUTF());
@@ -167,6 +170,8 @@ public class Movie {
 
         this.overview = dis.readUTF();
 
+        // Initialize lists before using them
+        this.crew = new ArrayList<>();
         int crewSize = dis.readInt();
         for(int i=0; i<crewSize; i++){
             this.crew.add(dis.readUTF());
