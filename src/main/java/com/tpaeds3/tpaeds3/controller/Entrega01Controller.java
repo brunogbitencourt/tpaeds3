@@ -18,6 +18,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,71 +32,99 @@ import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-
-
 @RestController
 @RequestMapping("/entrega01")
 @Tag(name = "Entrega 01: ")
 public class Entrega01Controller {
-   
+
+    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+
     @PostMapping("/convertCSVToBinary")
     public ResponseEntity<Resource> convertCSVToBinary(@RequestParam("file") MultipartFile file) {
-    if (file.isEmpty()) {
-        return ResponseEntity.badRequest().body(null);
-    }
-
-    try {
-        RandomAccessFile bynaryFile = new RandomAccessFile("./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db", "rw");
-        MovieFileManager movieFileManager = new MovieFileManager(bynaryFile);
-        List<Movie> movies = parseCSV(file); // Parse file to object list
-
-        bynaryFile.seek(0); // Set cursor to beginning
-        bynaryFile.writeInt(0); // Write Header initializing with 0
-
-        for (Movie movie : movies) {
-            movieFileManager.writeMovie(movie);
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest().body(null);
         }
 
-        // Close file
-        bynaryFile.close();
+        // try with resources, fecha o arquivo automaticamante ao final do bloco
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            List<Movie> movies = parseCSV(file); // Parse file to object list
 
-        // Retorn bynary file to API
-        File fileToReturn = new File("./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db");
-        InputStreamResource resource = new InputStreamResource(new FileInputStream(fileToReturn));
+            binaryFile.seek(0); // Set cursor to beginning
+            binaryFile.writeInt(0); // Write Header initializing with 0
 
-        // Configure HTTP Response
-        HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileToReturn.getName());
-        headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
+            for (Movie movie : movies) {
+                movieFileManager.writeMovie(movie);
+            }
 
-        return ResponseEntity.ok()
-                .headers(headers)
-                .contentLength(fileToReturn.length())
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
+            // Retorn bynary file to API
+            File fileToReturn = new File(FILE_PATH);
+            InputStreamResource resource = new InputStreamResource(new FileInputStream(fileToReturn));
 
-    } catch (IOException e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Return error 500
+            // Configure HTTP Response
+            HttpHeaders headers = new HttpHeaders();
+            headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileToReturn.getName());
+            headers.add(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE);
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .contentLength(fileToReturn.length())
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(resource);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Return error 500
+        }
     }
-}
+
+    @GetMapping("/getMovie")
+    public ResponseEntity<Movie> getMovie(@RequestParam("id") int id) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            Movie movie = movieFileManager.readMovie(id);
+
+            if (movie != null) {
+                return ResponseEntity.ok(movie);
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
+        }
+    }
+
+    @PostMapping("/deleteMovie")
+    public ResponseEntity<String> deleteMovie(@RequestParam("id") int id) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+
+            if (movieFileManager.deleteMovie(id)) {
+                return ResponseEntity.ok("Filme excluído com sucesso.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Filme não encontrado.");
+            }
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao excluir o filme."); // Retorna
+                                                                                                             // erro 500
+        }
+    }
 
     private List<Movie> parseCSV(MultipartFile file) throws IOException {
         List<Movie> movies = new ArrayList<>();
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String[] line;
-            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy"); // 
-            reader.skip(1); // Pula o cabeçalho
-            
+            SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
 
             while ((line = reader.readNext()) != null) {
                 Movie movie = new Movie();
-                movie.fromByteArray(b);
-                movie.setId(Integer.parseInt(line[0]));
+                // movie.setId(Integer.parseInt(line[0]));
                 movie.setName(line[1]);
                 try {
                     movie.setDate(dateFormat.parse(line[2]));
                 } catch (ParseException e) {
-                    e.printStackTrace(); 
+                    e.printStackTrace();
                 }
                 movie.setScore(Double.parseDouble(line[3]));
                 movie.setGenre(Arrays.asList(line[4].split(",")));
@@ -111,13 +140,9 @@ public class Entrega01Controller {
                 movies.add(movie);
             }
         } catch (CsvValidationException e) {
-            e.printStackTrace(); 
+            e.printStackTrace();
         }
         return movies;
     }
-
-
-
-
 
 }
