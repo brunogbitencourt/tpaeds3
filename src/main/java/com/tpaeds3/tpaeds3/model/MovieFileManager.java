@@ -2,6 +2,8 @@ package com.tpaeds3.tpaeds3.model;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MovieFileManager {
 
@@ -69,6 +71,39 @@ public class MovieFileManager {
         }
     
         return null;
+    }
+
+    public List<Movie> readAllMovies(int page, int size) throws IOException {
+        List<Movie> movies = new ArrayList<>();
+        file.seek(4); // Pular o int do último ID
+
+        int start = page * size;
+        int end = start + size;
+        int count = 0;
+
+        while (file.getFilePointer() < file.length() && count < end) {
+            byte recordStatus = file.readByte();
+            int recordSize = file.readInt();
+            
+            long nextRecordPosition = file.getFilePointer() + recordSize;
+            
+            if (recordStatus == VALID_RECORD) {
+                if (count >= start && count < end) {
+                    byte[] movieBytes = new byte[recordSize];
+                    file.readFully(movieBytes);
+        
+                    Movie movie = new Movie();
+                    movie.fromByteArray(movieBytes);
+        
+                    movies.add(movie);
+                }
+                count++;
+            }
+    
+            file.seek(nextRecordPosition);
+        }
+    
+        return movies;
     }
 
     public boolean deleteMovie(int id) throws IOException {

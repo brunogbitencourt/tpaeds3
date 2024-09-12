@@ -10,7 +10,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -100,7 +102,27 @@ public class Entrega01Controller {
         }
     }
 
+    @GetMapping("/getAllMovies")
+    public ResponseEntity<Map<String, Object>>  getAllMovie(
+        @RequestParam(defaultValue = "0") int page, 
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            List<Movie> movies = movieFileManager.readAllMovies(page, size);
 
+            Map<String, Object> response = new HashMap<>();
+            response.put("records", movies);
+            response.put("totalRecords", movies.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
+        }
+    }
+
+    
     @PostMapping("/createMovie")
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
          
