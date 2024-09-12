@@ -18,8 +18,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +33,8 @@ import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+
+
 
 @RestController
 @RequestMapping("/entrega01")
@@ -54,7 +58,9 @@ public class Entrega01Controller {
             binaryFile.writeInt(0); // Write Header initializing with 0
 
             for (Movie movie : movies) {
-                movieFileManager.writeMovie(movie);
+                if(!movieFileManager.writeMovie(movie)){
+                    System.out.println("Erro na inserção do arquivo");              
+                }
             }
 
             // Retorn bynary file to API
@@ -94,7 +100,29 @@ public class Entrega01Controller {
         }
     }
 
-    @PostMapping("/deleteMovie")
+
+    @PostMapping("/createMovie")
+    public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
+         
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")){
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            
+            if(movieFileManager.writeMovie(movie)){
+                return ResponseEntity.status(HttpStatus.CREATED)
+                .header("/entrega01", "/getMovie/" + movie.getId())
+                .body(movie);
+            }
+            else{
+                return new ResponseEntity<>(movie, HttpStatus.BAD_REQUEST);
+            }
+            
+        } catch (Exception e) {
+            return new ResponseEntity<>(movie, HttpStatus.INTERNAL_SERVER_ERROR);
+        }     
+       
+    }    
+
+    @DeleteMapping("/deleteMovie")
     public ResponseEntity<String> deleteMovie(@RequestParam("id") int id) {
         try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);

@@ -13,30 +13,36 @@ public class MovieFileManager {
         this.file = file;
     }
 
-    public void writeMovie(Movie movie) throws IOException{
-        file.seek(0); // Set cursor to beginning
-        int lastID = file.readInt();
-        movie.setId(lastID + 1); // Define o novo ID automaticamente
+    public boolean writeMovie(Movie movie) throws IOException {
+        try {
+            file.seek(0); // Set cursor to beginning
+            int lastID = file.readInt();
+            movie.setId(lastID + 1); // Define o novo ID automaticamente
 
-        // Parse objet to byte array
-        byte[] movieBytes = movie.toByteArray();
+            // Parse objet to byte array
+            byte[] movieBytes = movie.toByteArray();
 
-        // Set cursor to end of file
-        file.seek(file.length());
+            // Set cursor to end of file
+            file.seek(file.length());
 
-        // Write Valit Record
-        file.writeByte(VALID_RECORD);
+            // Write Valit Record
+            file.writeByte(VALID_RECORD);
 
-        // Write size of movie object
-        file.writeInt(movieBytes.length);
-        
-        // Write Object
-        file.write(movieBytes);
+            // Write size of movie object
+            file.writeInt(movieBytes.length);
 
-        // Update last ID with last id
-        file.seek(0);
-        file.writeInt(movie.getId());
-    }
+            // Write Object
+            file.write(movieBytes);
+
+            // Update last ID with last id
+            file.seek(0);
+            file.writeInt(movie.getId());
+            return true;
+
+        } catch (Exception e) {
+            return false;
+        }
+    }    
 
     public Movie readMovie(int movieId) throws IOException {
         file.seek(4); // Pular o int do último ID
