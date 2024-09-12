@@ -8,14 +8,27 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
 public class Movie {
 
+    private static final String BASE_DATE_STRING = "01/01/1970";
+    private static final SimpleDateFormat BASE_DATE_FORMAT = new SimpleDateFormat("dd/MM/yyyy");
+    private static Date BASE_DATE;
+
+    static {
+        try {
+            BASE_DATE = BASE_DATE_FORMAT.parse(BASE_DATE_STRING);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+    }
+
     private int id;
     private String name;
-    private Date date;    
+    private short date;    
     private double score;
     private List<String> genre;
     private String overview;
@@ -27,6 +40,18 @@ public class Movie {
     private double revenue;
     private String country;
 
+    // Getters e setters para a data como Date
+    public Date getDate() {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(BASE_DATE);
+        cal.add(Calendar.DAY_OF_YEAR, this.date);  // Adiciona os dias ao BASE_DATE
+        return cal.getTime();
+    }
+
+    public void setDate(Date date) {
+        long diffInMillis = date.getTime() - BASE_DATE.getTime();
+        this.date = (short) (diffInMillis / (1000 * 60 * 60 * 24));  // Converter milissegundos para dias e armazenar como short
+    }
     public int getId() {
         return id;
     }
@@ -38,12 +63,6 @@ public class Movie {
     }
     public void setName(String name) {
         this.name = name;
-    }
-    public Date getDate() {
-        return date;
-    }
-    public void setDate(Date date) {
-        this.date = date;
     }
     public double getScore() {
         return score;
@@ -113,9 +132,7 @@ public class Movie {
         dos.writeInt(this.id);
         dos.writeUTF(this.name);
 
-        // Convert data to string (yyyy-MM-dd easier to sort)
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        dos.writeUTF(df.format(this.date));       
+        dos.writeShort(this.date);  // Armazena a data como número de dias (short)     
 
         dos.writeDouble(this.score);
 
@@ -152,12 +169,7 @@ public class Movie {
         this.id = dis.readInt();
         this.name = dis.readUTF();
 
-        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd");
-        try {
-            this.date = df.parse(dis.readUTF());
-        } catch (ParseException e) {
-            System.err.println("Error: Parse Date");
-        }
+        this.date = dis.readShort();  // Lê a data como número de dias (short)
 
         this.score = dis.readDouble();
 
