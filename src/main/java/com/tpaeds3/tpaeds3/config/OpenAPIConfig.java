@@ -42,7 +42,7 @@ public class OpenAPIConfig {
             String path = handlerMethod.getMethod().getName();
             if (path != null) {
                 switch (path) {
-                    case "convertCSVToBinary" -> {
+                    case "createDataBase" -> {
                         operation.setSummary("Converts a CSV file to binary file");
                         operation.setDescription("This end point allows a conversion of a movie.csv file to movie.db file.");
                         Schema<?> fileSchema = new Schema<>()

@@ -73,6 +73,41 @@ public class MovieFileManager {
         return null;
     }
 
+    public List<Movie> readMoviesByIds(List<Integer> ids) throws IOException {
+        List<Movie> movies = new ArrayList<>();
+
+        // Se a lista de IDs estiver vazia, retorne uma lista vazia
+        if (ids == null || ids.isEmpty()) {
+            return movies;
+        }
+
+        file.seek(4); // Pular o int do último ID
+
+        while (file.getFilePointer() < file.length()) {
+            byte recordStatus = file.readByte();
+            int recordSize = file.readInt();
+
+            long nextRecordPosition = file.getFilePointer() + recordSize;
+
+            if (recordStatus == VALID_RECORD) {
+                byte[] movieBytes = new byte[recordSize];
+                file.readFully(movieBytes);
+
+                Movie movie = new Movie();
+                movie.fromByteArray(movieBytes);
+
+                if (ids.contains(movie.getId())) {
+                    movies.add(movie);
+                    ids.remove(Integer.valueOf(movie.getId())); // Remover ID da lista após encontrar o filme
+                }
+            }
+
+            file.seek(nextRecordPosition);
+        }
+
+        return movies;
+    }
+
     public List<Movie> readAllMovies(int page, int size) throws IOException {
         List<Movie> movies = new ArrayList<>();
         file.seek(4); // Pular o int do último ID

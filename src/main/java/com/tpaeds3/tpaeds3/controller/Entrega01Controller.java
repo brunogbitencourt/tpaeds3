@@ -45,8 +45,8 @@ public class Entrega01Controller {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
 
-    @PostMapping("/convertCSVToBinary")
-    public ResponseEntity<Resource> convertCSVToBinary(@RequestParam("file") MultipartFile file) {
+    @PostMapping("/createDataBase")
+    public ResponseEntity<Resource> createDataBase(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -96,6 +96,23 @@ public class Entrega01Controller {
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
             }
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
+        }
+    }
+
+    @GetMapping("/getMoviesByIds")
+    public ResponseEntity<Map<String, Object>> getMoviesByIds(@RequestParam List<Integer> ids) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            List<Movie> movies = movieFileManager.readMoviesByIds(new ArrayList<>(ids));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("records", movies);
+            response.put("totalRecords", movies.size());
+
+            return ResponseEntity.ok(response);
 
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
