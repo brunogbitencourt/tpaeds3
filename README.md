@@ -19,7 +19,7 @@ Esta documentação descreve a API para o gerenciamento de filmes em formato bin
   - **Nome:** Bruno Guimarães Bitencourt
   - **Email:** brunogbitencourt@hotmail.com
   - **Nome:** Oscar Dias
-  - **Email:** oscardias@gmail.com
+  - **Email:** dias_oscar@hotmail.com
 - **Licença:** Apache 2.0 ([Link](http://springdoc.org))
 
 ## Endpoints
