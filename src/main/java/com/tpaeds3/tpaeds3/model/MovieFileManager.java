@@ -2,6 +2,13 @@ package com.tpaeds3.tpaeds3.model;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Date;
+import java.text.ParseException;
+
 
 public class MovieFileManager {
 
@@ -71,6 +78,74 @@ public class MovieFileManager {
         return null;
     }
 
+    public List<Movie> readMoviesByIds(List<Integer> ids) throws IOException {
+        List<Movie> movies = new ArrayList<>();
+
+        // Se a lista de IDs estiver vazia, retorne uma lista vazia
+        if (ids == null || ids.isEmpty()) {
+            return movies;
+        }
+
+        file.seek(4); // Pular o int do último ID
+
+        while (file.getFilePointer() < file.length()) {
+            byte recordStatus = file.readByte();
+            int recordSize = file.readInt();
+
+            long nextRecordPosition = file.getFilePointer() + recordSize;
+
+            if (recordStatus == VALID_RECORD) {
+                byte[] movieBytes = new byte[recordSize];
+                file.readFully(movieBytes);
+
+                Movie movie = new Movie();
+                movie.fromByteArray(movieBytes);
+
+                if (ids.contains(movie.getId())) {
+                    movies.add(movie);
+                    ids.remove(Integer.valueOf(movie.getId())); // Remover ID da lista após encontrar o filme
+                }
+            }
+
+            file.seek(nextRecordPosition);
+        }
+
+        return movies;
+    }
+
+    public List<Movie> readAllMovies(int page, int size) throws IOException {
+        List<Movie> movies = new ArrayList<>();
+        file.seek(4); // Pular o int do último ID
+
+        int start = page * size;
+        int end = start + size;
+        int count = 0;
+
+        while (file.getFilePointer() < file.length() && count < end) {
+            byte recordStatus = file.readByte();
+            int recordSize = file.readInt();
+            
+            long nextRecordPosition = file.getFilePointer() + recordSize;
+            
+            if (recordStatus == VALID_RECORD) {
+                if (count >= start && count < end) {
+                    byte[] movieBytes = new byte[recordSize];
+                    file.readFully(movieBytes);
+        
+                    Movie movie = new Movie();
+                    movie.fromByteArray(movieBytes);
+        
+                    movies.add(movie);
+                }
+                count++;
+            }
+    
+            file.seek(nextRecordPosition);
+        }
+    
+        return movies;
+    }
+
     public boolean deleteMovie(int id) throws IOException {
         file.seek(4); // Pula o cabeçalho (último ID)
 
@@ -101,6 +176,99 @@ public class MovieFileManager {
         }
 
         return false; // Retorna false se o filme não for encontrado
+    }
+ 
+    public boolean updateMovie(int movieId, Map<String, Object> updates) throws IOException {
+        file.seek(4); // Pular o cabeçalho (último ID)
+
+        while (file.getFilePointer() < file.length()) {
+            long recordPosition = file.getFilePointer();
+            byte recordStatus = file.readByte();
+            int recordSize = file.readInt();
+
+            if (recordStatus == VALID_RECORD) {
+                byte[] movieBytes = new byte[recordSize];
+                file.readFully(movieBytes);
+
+                Movie movie = new Movie();
+                movie.fromByteArray(movieBytes);
+
+                if (movie.getId() == movieId) {
+                    // Aplicar atualizações ao filme
+                    applyUpdates(movie, updates);
+                    
+                    byte[] updatedMovieBytes = movie.toByteArray();
+
+                    // Se o novo filme couber no espaço do registro original, apenas sobrescreva
+                    if (updatedMovieBytes.length <= recordSize) {
+                        // Posicionar o ponteiro para o início do registro
+                        file.seek(recordPosition + 1 + 4); // Pular o byte de status e o int do tamanho
+
+                        // Escrever o filme atualizado no mesmo espaço
+                        file.write(updatedMovieBytes);
+                    } else {
+                        // Se o filme atualizado não couber, marcar como deletado e escrever um novo registro no final
+                        file.seek(recordPosition);
+                        file.writeByte(DELETED_RECORD); // Marca como deletado
+
+                        // Escreve o novo registro no final do arquivo
+                        movie.setId(movieId); // Mantém o ID original
+                        return writeMovie(movie); // Escreve o novo filme no final
+                    }
+                    return true;
+                }
+            } else {
+                file.skipBytes(recordSize); // Pular os registros deletados
+            }
+        }
+        return false; // Retorna false se o filme não for encontrado
+    }
+
+    private void applyUpdates(Movie movie, Map<String, Object> updates) {
+        if (updates.containsKey("name")) {
+            movie.setName((String) updates.get("name"));
+        }
+        if (updates.containsKey("date")) {
+        String dateString = (String) updates.get("date");
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd"); // Ajuste o formato conforme necessário
+            Date date = dateFormat.parse(dateString);
+            movie.setDate(date);
+        } catch (ParseException e) {
+            // Log e tratar erro de conversão de data
+            e.printStackTrace();
+        }
+    }
+        if (updates.containsKey("score")) {
+            movie.setScore((Double) updates.get("score"));
+        }
+        if (updates.containsKey("genre")) {
+            movie.setGenre((List<String>) updates.get("genre"));
+        }
+        if (updates.containsKey("overview")) {
+            movie.setOverview((String) updates.get("overview"));
+        }
+        if (updates.containsKey("crew")) {
+            movie.setCrew((List<String>) updates.get("crew"));
+        }
+        if (updates.containsKey("originTitle")) {
+            movie.setOriginTitle((String) updates.get("originTitle"));
+        }
+        if (updates.containsKey("status")) {
+            movie.setStatus((String) updates.get("status"));
+        }
+        if (updates.containsKey("originLang")) {
+            movie.setOriginLang((String) updates.get("originLang"));
+        }
+        if (updates.containsKey("budget")) {
+            movie.setBudget((Double) updates.get("budget"));
+        }
+        if (updates.containsKey("revenue")) {
+            movie.setRevenue((Double) updates.get("revenue"));
+        }
+        if (updates.containsKey("country")) {
+            movie.setCountry((String) updates.get("country"));
+        }
     }
     
 }

@@ -10,7 +10,9 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.core.io.Resource;
@@ -20,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,8 +47,8 @@ public class Entrega01Controller {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
 
-    @PostMapping("/convertCSVToBinary")
-    public ResponseEntity<Resource> convertCSVToBinary(@RequestParam("file") MultipartFile file) {
+    @PostMapping("/createDataBase")
+    public ResponseEntity<Resource> createDataBase(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -58,8 +62,8 @@ public class Entrega01Controller {
             binaryFile.writeInt(0); // Write Header initializing with 0
 
             for (Movie movie : movies) {
-                if(!movieFileManager.writeMovie(movie)){
-                    System.out.println("Erro na inserção do arquivo");              
+                if (!movieFileManager.writeMovie(movie)) {
+                    System.out.println("Erro na inserção do arquivo");
                 }
             }
 
@@ -100,27 +104,61 @@ public class Entrega01Controller {
         }
     }
 
+    @GetMapping("/getMoviesByIds")
+    public ResponseEntity<Map<String, Object>> getMoviesByIds(@RequestParam List<Integer> ids) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            List<Movie> movies = movieFileManager.readMoviesByIds(new ArrayList<>(ids));
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("records", movies);
+            response.put("totalRecords", movies.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
+        }
+    }
+
+    @GetMapping("/getAllMovies")
+    public ResponseEntity<Map<String, Object>> getAllMovie(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+            List<Movie> movies = movieFileManager.readAllMovies(page, size);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("records", movies);
+            response.put("totalRecords", movies.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
+        }
+    }
 
     @PostMapping("/createMovie")
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
-         
-        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")){
+
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
-            
-            if(movieFileManager.writeMovie(movie)){
+
+            if (movieFileManager.writeMovie(movie)) {
                 return ResponseEntity.status(HttpStatus.CREATED)
-                .header("/entrega01", "/getMovie/" + movie.getId())
-                .body(movie);
-            }
-            else{
+                        .header("/entrega01", "/getMovie/" + movie.getId())
+                        .body(movie);
+            } else {
                 return new ResponseEntity<>(movie, HttpStatus.BAD_REQUEST);
             }
-            
+
         } catch (Exception e) {
             return new ResponseEntity<>(movie, HttpStatus.INTERNAL_SERVER_ERROR);
-        }     
-       
-    }    
+        }
+
+    }
 
     @DeleteMapping("/deleteMovie")
     public ResponseEntity<String> deleteMovie(@RequestParam("id") int id) {
@@ -136,6 +174,23 @@ public class Entrega01Controller {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao excluir o filme."); // Retorna
                                                                                                              // erro 500
+        }
+    }
+
+    @PatchMapping("/updateMovie/{id}")
+    public ResponseEntity<String> updateMovie(@PathVariable int id, @RequestBody Map<String, Object> updates) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+
+            boolean success = movieFileManager.updateMovie(id, updates);
+
+            if (success) {
+                return ResponseEntity.ok("Filme atualizado com sucesso.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Filme não encontrado.");
+            }
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar o filme.");
         }
     }
 
