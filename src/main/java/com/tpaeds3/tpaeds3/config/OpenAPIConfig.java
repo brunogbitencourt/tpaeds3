@@ -24,19 +24,19 @@ public class OpenAPIConfig {
     @Bean
     public OpenAPI customOpenAPI() {
         return new OpenAPI()
-                .info(new Info()
-                        .title("Trabalho Prático - AEDS 3 - API")
-                        .version("1.0")
-                        .description("API para gerenciamento de filmes em formato binário.")
-                        .contact(new Contact()
-                                .name("Bruno Guimarães Bitencourt")
-                                .email("brunogbitencourt@hotmail.com"))
-                        .contact(new Contact()
-                                .name("Oscar Dias")
-                                .email("oscardias@gmail.com"))
-                        .license(new License()
-                                .name("Apache 2.0")
-                                .url("http://springdoc.org")));
+            .info(new Info()
+                .title("Trabalho Prático - AEDS 3 - API")
+                .version("1.0")
+                .description("API para gerenciamento de filmes em formato binário.")
+                .contact(new Contact()
+                        .name("Bruno Guimarães Bitencourt")
+                        .email("brunogbitencourt@hotmail.com"))
+                .contact(new Contact()
+                        .name("Oscar Dias")
+                        .email("dias_oscar@hotmail.com"))
+                .license(new License()
+                        .name("Apache 2.0")
+                        .url("http://springdoc.org")));
     }
 
     @Bean
@@ -60,7 +60,8 @@ public class OpenAPIConfig {
                                         .addMediaType("multipart/form-data", new MediaType()
                                                 .schema(fileSchema))));
                         operation.setResponses(new ApiResponses()
-                                .addApiResponse("200", new ApiResponse().description("Arquivo binário criado com sucesso."))
+                                .addApiResponse("200",
+                                        new ApiResponse().description("Arquivo binário criado com sucesso."))
                                 .addApiResponse("400", new ApiResponse().description("Arquivo CSV inválido."))
                                 .addApiResponse("500", new ApiResponse().description("Erro ao processar o arquivo.")));
                     }
@@ -72,9 +73,8 @@ public class OpenAPIConfig {
                                         .name("id")
                                         .description("ID do filme a ser obtido")
                                         .required(true)
-                                        .in("query")  // Corrigido para 'query'
-                                        .schema(new Schema<>().type("integer"))
-                        ));
+                                        .in("query") 
+                                        .schema(new Schema<>().type("integer"))));
                         operation.setResponses(new ApiResponses()
                                 .addApiResponse("200", new ApiResponse().description("Filme encontrado."))
                                 .addApiResponse("404", new ApiResponse().description("Filme não encontrado."))
@@ -88,13 +88,15 @@ public class OpenAPIConfig {
                                         .name("ids")
                                         .description("Lista de IDs dos filmes a serem obtidos")
                                         .required(true)
-                                        .in("query")  // Corrigido para 'query'
-                                        .schema(new Schema<>().type("array").items(new Schema<>().type("integer")))
-                        ));
+                                        .in("query") 
+                                        .schema(new Schema<>().type("array").items(new Schema<>().type("integer")))));
                         operation.setResponses(new ApiResponses()
                                 .addApiResponse("200", new ApiResponse().description("Lista de filmes encontrada."))
-                                .addApiResponse("404", new ApiResponse().description("Nenhum filme encontrado para os IDs fornecidos."))
-                                .addApiResponse("500", new ApiResponse().description("Erro ao obter a lista de filmes.")));
+                                .addApiResponse("404",
+                                        new ApiResponse()
+                                                .description("Nenhum filme encontrado para os IDs fornecidos."))
+                                .addApiResponse("500",
+                                        new ApiResponse().description("Erro ao obter a lista de filmes.")));
                     }
                     case "getAllMovie" -> {
                         operation.setSummary("Obtém todos os filmes com paginação");
@@ -104,20 +106,21 @@ public class OpenAPIConfig {
                                         .name("page")
                                         .description("Número da página para a paginação")
                                         .required(false)
-                                        .in("query")  // Corrigido para 'query'
+                                        .in("query") 
                                         .schema(new Schema<>().type("integer"))
                                         .example(0),
                                 new Parameter()
                                         .name("size")
                                         .description("Número de filmes por página")
                                         .required(false)
-                                        .in("query")  // Corrigido para 'query'
+                                        .in("query") 
                                         .schema(new Schema<>().type("integer"))
-                                        .example(10)
-                        ));
+                                        .example(10)));
                         operation.setResponses(new ApiResponses()
-                                .addApiResponse("200", new ApiResponse().description("Lista de filmes retornada com sucesso."))
-                                .addApiResponse("500", new ApiResponse().description("Erro ao obter a lista de filmes.")));
+                                .addApiResponse("200",
+                                        new ApiResponse().description("Lista de filmes retornada com sucesso."))
+                                .addApiResponse("500",
+                                        new ApiResponse().description("Erro ao obter a lista de filmes.")));
                     }
                     case "createMovie" -> {
                         operation.setSummary("Cria um novo filme");
@@ -127,20 +130,19 @@ public class OpenAPIConfig {
                         Schema<?> movieSchema = new Schema<>()
                                 .type("object")
                                 .properties(Map.ofEntries(
-                                    Map.entry("id", new Schema<>().type("integer")),
-                                    Map.entry("title", new Schema<>().type("string")),
-                                    Map.entry("releaseDate", new Schema<>().type("string").format("date")),
-                                    Map.entry("duration", new Schema<>().type("number").format("float")),
-                                    Map.entry("genre", new Schema<>().type("string")),
-                                    Map.entry("description", new Schema<>().type("string")),
-                                    Map.entry("cast", new Schema<>().type("string")),
-                                    Map.entry("originalTitle", new Schema<>().type("string")),
-                                    Map.entry("status", new Schema<>().type("string")),
-                                    Map.entry("language", new Schema<>().type("string")),
-                                    Map.entry("budget", new Schema<>().type("number").format("float")),
-                                    Map.entry("boxOffice", new Schema<>().type("number").format("float")),
-                                    Map.entry("country", new Schema<>().type("string"))
-                                ));
+                                        Map.entry("id", new Schema<>().type("integer")),
+                                        Map.entry("name", new Schema<>().type("string")),
+                                        Map.entry("date", new Schema<>().type("string").format("date")),
+                                        Map.entry("score", new Schema<>().type("number").format("double")),
+                                        Map.entry("genre", new Schema<>().type("array").items(new Schema<>().type("string"))),
+                                        Map.entry("overview", new Schema<>().type("string")),
+                                        Map.entry("crew", new Schema<>().type("array").items(new Schema<>().type("string"))),
+                                        Map.entry("originTitle", new Schema<>().type("string")),
+                                        Map.entry("status", new Schema<>().type("string")),
+                                        Map.entry("originLang", new Schema<>().type("string")),
+                                        Map.entry("budget", new Schema<>().type("number").format("double")),
+                                        Map.entry("revenue", new Schema<>().type("number").format("double")),
+                                        Map.entry("country", new Schema<>().type("string"))));
 
                         operation.setRequestBody(new RequestBody()
                                 .description("Informações do filme a ser criado.")
@@ -153,6 +155,47 @@ public class OpenAPIConfig {
                                 .addApiResponse("400", new ApiResponse().description("Dados do filme inválidos."))
                                 .addApiResponse("500", new ApiResponse().description("Erro ao criar o filme.")));
                     }
+                    case "updateMovie" -> {
+                        operation.setSummary("Atualiza um filme por ID");
+                        operation.setDescription("Este endpoint atualiza as informações de um filme com base no ID fornecido.");
+                    
+                        Schema<?> movieSchema = new Schema<>()
+                                .type("object")
+                                .properties(Map.ofEntries(
+                                        Map.entry("id", new Schema<>().type("integer")),
+                                        Map.entry("name", new Schema<>().type("string")),
+                                        Map.entry("date", new Schema<>().type("string").format("date")),
+                                        Map.entry("score", new Schema<>().type("number").format("double")),
+                                        Map.entry("genre", new Schema<>().type("array").items(new Schema<>().type("string"))),
+                                        Map.entry("overview", new Schema<>().type("string")),
+                                        Map.entry("crew", new Schema<>().type("array").items(new Schema<>().type("string"))),
+                                        Map.entry("originTitle", new Schema<>().type("string")),
+                                        Map.entry("status", new Schema<>().type("string")),
+                                        Map.entry("originLang", new Schema<>().type("string")),
+                                        Map.entry("budget", new Schema<>().type("number").format("double")),
+                                        Map.entry("revenue", new Schema<>().type("number").format("double")),
+                                        Map.entry("country", new Schema<>().type("string"))));
+                    
+                        operation.setRequestBody(new RequestBody()
+                                .description("Informações atualizadas do filme.")
+                                .required(true)
+                                .content(new Content()
+                                        .addMediaType("application/json", new MediaType()
+                                                .schema(movieSchema))));
+                        operation.setParameters(List.of(
+                                new Parameter()
+                                        .name("id")
+                                        .description("ID do filme a ser atualizado")
+                                        .required(true)
+                                        .in("path") 
+                                        .schema(new Schema<>().type("integer"))));
+                    
+                        operation.setResponses(new ApiResponses()
+                                .addApiResponse("200", new ApiResponse().description("Filme atualizado com sucesso."))
+                                .addApiResponse("400", new ApiResponse().description("Dados do filme inválidos ou incompletos."))
+                                .addApiResponse("404", new ApiResponse().description("Filme não encontrado."))
+                                .addApiResponse("500", new ApiResponse().description("Erro ao atualizar o filme.")));
+                    }                    
                     case "deleteMovie" -> {
                         operation.setSummary("Exclui um filme por ID");
                         operation.setDescription("Este endpoint exclui um filme específico com base no ID fornecido.");
@@ -161,9 +204,8 @@ public class OpenAPIConfig {
                                         .name("id")
                                         .description("ID do filme a ser excluído")
                                         .required(true)
-                                        .in("query")  // Corrigido para 'query'
-                                        .schema(new Schema<>().type("integer"))
-                        ));
+                                        .in("query") 
+                                        .schema(new Schema<>().type("integer"))));
                         operation.setResponses(new ApiResponses()
                                 .addApiResponse("200", new ApiResponse().description("Filme excluído com sucesso."))
                                 .addApiResponse("404", new ApiResponse().description("Filme não encontrado."))

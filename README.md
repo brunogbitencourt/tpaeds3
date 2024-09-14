@@ -1,8 +1,8 @@
 # Trabalho Prático de Algoritmos e Estrutura de Dados III
 
 Autores: 
-    Bruno Guimarães Bitencourt 
-    Oscar Dias
+- Bruno Guimarães Bitencourt 
+- Oscar Dias
 
 # Documentação da API
 
@@ -101,6 +101,37 @@ Esta documentação descreve a API para o gerenciamento de filmes em formato bin
   - **400 Bad Request:** Dados do filme inválidos.
   - **500 Internal Server Error:** Erro ao criar o filme.
 
+### Atualizar Filme por ID
+
+- **Método:** `PATCH`
+- **Endpoint:** `/updateMovie`
+- **Descrição:** Atualiza as informações de um filme com base no ID fornecido.
+- **Parâmetros:**
+  - **id** (query): ID do filme a ser atualizado.
+- **Corpo da Requisição:**
+  - **application/json:**
+    ```json
+    {
+      "name": "Era uma vez um filme",
+      "date": "2023-02-03",
+      "score": 75.0,
+      "genre": ["Drama", "Action"],
+      "overview": "Novo resumo do filme...",
+      "crew": ["Novo Diretor", "Novo Ator"],
+      "originTitle": "Novo Título",
+      "status": "Released",
+      "originLang": "Portuguese",
+      "budget": 80000000.0,
+      "revenue": 300000000.0,
+      "country": "BR"
+    }
+    ```
+- **Respostas:**
+  - **200 OK:** Filme atualizado com sucesso.
+  - **400 Bad Request:** Dados do filme inválidos ou incompletos.
+  - **404 Not Found:** Filme não encontrado.
+  - **500 Internal Server Error:** Erro ao atualizar o filme.
+
 ### Excluir Filme por ID
 
 - **Método:** `DELETE`
@@ -119,7 +150,7 @@ Aqui está o esquema detalhado do modelo `Movie` para referência:
 
 - **id**: integer
 - **name**: string
-- **date**: short (número de dias desde "01/01/1970")
+- **date**: string (formato "YYYY-MM-DD")
 - **score**: double
 - **genre**: array of strings
 - **overview**: string
@@ -130,5 +161,4 @@ Aqui está o esquema detalhado do modelo `Movie` para referência:
 - **budget**: double
 - **revenue**: double
 - **country**: string
-
 

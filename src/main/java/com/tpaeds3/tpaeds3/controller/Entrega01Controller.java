@@ -22,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -60,8 +62,8 @@ public class Entrega01Controller {
             binaryFile.writeInt(0); // Write Header initializing with 0
 
             for (Movie movie : movies) {
-                if(!movieFileManager.writeMovie(movie)){
-                    System.out.println("Erro na inserção do arquivo");              
+                if (!movieFileManager.writeMovie(movie)) {
+                    System.out.println("Erro na inserção do arquivo");
                 }
             }
 
@@ -120,10 +122,9 @@ public class Entrega01Controller {
     }
 
     @GetMapping("/getAllMovies")
-    public ResponseEntity<Map<String, Object>>  getAllMovie(
-        @RequestParam(defaultValue = "0") int page, 
-        @RequestParam(defaultValue = "10") int size
-    ) {
+    public ResponseEntity<Map<String, Object>> getAllMovie(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
             List<Movie> movies = movieFileManager.readAllMovies(page, size);
@@ -139,27 +140,25 @@ public class Entrega01Controller {
         }
     }
 
-    
     @PostMapping("/createMovie")
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
-         
-        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")){
+
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
-            
-            if(movieFileManager.writeMovie(movie)){
+
+            if (movieFileManager.writeMovie(movie)) {
                 return ResponseEntity.status(HttpStatus.CREATED)
-                .header("/entrega01", "/getMovie/" + movie.getId())
-                .body(movie);
-            }
-            else{
+                        .header("/entrega01", "/getMovie/" + movie.getId())
+                        .body(movie);
+            } else {
                 return new ResponseEntity<>(movie, HttpStatus.BAD_REQUEST);
             }
-            
+
         } catch (Exception e) {
             return new ResponseEntity<>(movie, HttpStatus.INTERNAL_SERVER_ERROR);
-        }     
-       
-    }    
+        }
+
+    }
 
     @DeleteMapping("/deleteMovie")
     public ResponseEntity<String> deleteMovie(@RequestParam("id") int id) {
@@ -175,6 +174,23 @@ public class Entrega01Controller {
         } catch (IOException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao excluir o filme."); // Retorna
                                                                                                              // erro 500
+        }
+    }
+
+    @PatchMapping("/updateMovie/{id}")
+    public ResponseEntity<String> updateMovie(@PathVariable int id, @RequestBody Map<String, Object> updates) {
+        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
+            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
+
+            boolean success = movieFileManager.updateMovie(id, updates);
+
+            if (success) {
+                return ResponseEntity.ok("Filme atualizado com sucesso.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Filme não encontrado.");
+            }
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erro ao atualizar o filme.");
         }
     }
 
