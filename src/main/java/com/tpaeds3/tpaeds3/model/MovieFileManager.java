@@ -226,6 +226,26 @@ public class MovieFileManager {
         return false; // Retorna false se o filme não for encontrado
     }
 
+
+    public  Movie getMoveByPosition(long position) throws IOException{
+
+        file.seek(position);
+
+        byte recordStatus = file.readByte();
+        int recordSize = file.readInt();
+
+        if (recordStatus == VALID_RECORD) {
+            byte[] movieBytes = new byte[recordSize];
+            file.readFully(movieBytes);
+            Movie movie = new Movie();
+            movie.fromByteArray(movieBytes);
+  
+            return movie;
+        }
+    
+        return null;
+    }
+
     private void applyUpdates(Movie movie, Map<String, Object> updates) {
         if (updates.containsKey("name")) {
             movie.setName((String) updates.get("name"));
