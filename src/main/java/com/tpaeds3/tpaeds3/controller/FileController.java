@@ -131,28 +131,30 @@ public class FileController {
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
             String[] line;
             SimpleDateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+            int idCount = 1;
 
             while ((line = reader.readNext()) != null) {
                 Movie movie = new Movie();
-                // movie.setId(Integer.parseInt(line[0]));
-                movie.setName(line[1]);
+                movie.setId(idCount);                
+                movie.setName(line[0]);
                 try {
-                    movie.setDate(dateFormat.parse(line[2]));
+                    movie.setDate(dateFormat.parse(line[1]));
                 } catch (ParseException e) {
                     e.printStackTrace();
                 }
-                movie.setScore(Double.parseDouble(line[3]));
-                movie.setGenre(Arrays.asList(line[4].split(",")));
-                movie.setOverview(line[5]);
-                movie.setCrew(Arrays.asList(line[6].split(",")));
-                movie.setOriginTitle(line[7]);
-                movie.setStatus(line[8]);
-                movie.setOriginLang(line[9]);
-                movie.setBudget(Double.parseDouble(line[10]));
-                movie.setRevenue(Double.parseDouble(line[11]));
-                movie.setCountry(line[12]);
+                movie.setScore(Double.parseDouble(line[2]));
+                movie.setGenre(Arrays.asList(line[3].split(",")));
+                movie.setOverview(line[4]);
+                movie.setCrew(Arrays.asList(line[5].split(",")));
+                movie.setOriginTitle(line[6]);
+                movie.setStatus(line[7]);
+                movie.setOriginLang(line[8]);
+                movie.setBudget(Double.parseDouble(line[9]));
+                movie.setRevenue(Double.parseDouble(line[10]));
+                movie.setCountry(line[11]);
 
                 movies.add(movie);
+                idCount++;
             }
         } catch (CsvValidationException e) {
             e.printStackTrace();
