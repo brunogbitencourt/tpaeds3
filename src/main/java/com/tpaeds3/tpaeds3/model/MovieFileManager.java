@@ -2,12 +2,12 @@ package com.tpaeds3.tpaeds3.model;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Date;
-import java.text.ParseException;
 
 
 public class MovieFileManager {
@@ -20,7 +20,8 @@ public class MovieFileManager {
         this.file = file;
     }
 
-    public boolean writeMovie(Movie movie) throws IOException {
+    public long writeMovie(Movie movie) throws IOException {
+        long position = 1;
         try {
             file.seek(0); // Set cursor to beginning
             int lastID = file.readInt();
@@ -31,6 +32,7 @@ public class MovieFileManager {
 
             // Set cursor to end of file
             file.seek(file.length());
+            position =  file.length();
 
             // Write Valit Record
             file.writeByte(VALID_RECORD);
@@ -44,10 +46,10 @@ public class MovieFileManager {
             // Update last ID with last id
             file.seek(0);
             file.writeInt(movie.getId());
-            return true;
+            return position;
 
         } catch (Exception e) {
-            return false;
+            return -1;
         }
     }    
 
@@ -213,7 +215,7 @@ public class MovieFileManager {
 
                         // Escreve o novo registro no final do arquivo
                         movie.setId(movieId); // Mantém o ID original
-                        return writeMovie(movie); // Escreve o novo filme no final
+                        return writeMovie(movie) == -1  ? false : true ; // Escreve o novo filme no final
                     }
                     return true;
                 }
@@ -222,6 +224,26 @@ public class MovieFileManager {
             }
         }
         return false; // Retorna false se o filme não for encontrado
+    }
+
+
+    public  Movie getMoveByPosition(long position) throws IOException{
+
+        file.seek(position);
+
+        byte recordStatus = file.readByte();
+        int recordSize = file.readInt();
+
+        if (recordStatus == VALID_RECORD) {
+            byte[] movieBytes = new byte[recordSize];
+            file.readFully(movieBytes);
+            Movie movie = new Movie();
+            movie.fromByteArray(movieBytes);
+  
+            return movie;
+        }
+    
+        return null;
     }
 
     private void applyUpdates(Movie movie, Map<String, Object> updates) {
