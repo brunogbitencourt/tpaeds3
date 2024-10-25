@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.tpaeds3.tpaeds3.model.Index;
+import com.tpaeds3.tpaeds3.model.IndexFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
@@ -32,6 +34,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class Entrega01Controller {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
 
 
     @GetMapping("/getMovie")
@@ -112,7 +115,14 @@ public class Entrega01Controller {
         try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
 
-            if (movieFileManager.deleteMovie(id)) {
+            String deletedMovie = movieFileManager.deleteMovie(id);
+
+            if (deletedMovie != null) {
+                RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
+                IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
+
+                indexFileManager.deleteIndex(deletedMovie);
+
                 return ResponseEntity.ok("Filme excluído com sucesso.");
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Filme não encontrado.");
@@ -129,9 +139,16 @@ public class Entrega01Controller {
         try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
 
-            boolean success = movieFileManager.updateMovie(id, updates);
+            Index index = movieFileManager.updateMovie(id, updates);
 
-            if (success) {
+            Long newPosition = index.getNewPosition();
+
+            if (newPosition != -1) {
+                RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
+                IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
+
+                indexFileManager.updateIndex(index.getLastName(), index.getNewName(), index.getNewPosition());
+
                 return ResponseEntity.ok("Filme atualizado com sucesso.");
             } else {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Filme não encontrado.");
