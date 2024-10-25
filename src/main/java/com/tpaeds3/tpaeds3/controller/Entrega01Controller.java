@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.tpaeds3.tpaeds3.model.Index;
 import com.tpaeds3.tpaeds3.model.IndexFileManager;
+import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
@@ -35,7 +36,7 @@ public class Entrega01Controller {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
-
+    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
 
     @GetMapping("/getMovie")
     public ResponseEntity<Movie> getMovie(@RequestParam("id") int id) {
@@ -115,12 +116,18 @@ public class Entrega01Controller {
         try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "rw")) {
             MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
 
+            // Deletar filme da base de dados
             String deletedMovie = movieFileManager.deleteMovie(id);
 
             if (deletedMovie != null) {
+                RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
+                IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+                // Deletar filme do índice por id
+                indexByIdFileManager.deleteIndex(id);
+                
                 RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
                 IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
-
+                // Deletar filme do índice por nome
                 indexFileManager.deleteIndex(deletedMovie);
 
                 return ResponseEntity.ok("Filme excluído com sucesso.");
@@ -142,12 +149,20 @@ public class Entrega01Controller {
             Index index = movieFileManager.updateMovie(id, updates);
 
             Long newPosition = index.getNewPosition();
+            String lastName = index.getLastName();
+            String newName = index.getNewName();
 
             if (newPosition != -1) {
+
+                RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
+                IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+
+                indexByIdFileManager.updateIndex(id, newPosition);
+
                 RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
                 IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
 
-                indexFileManager.updateIndex(index.getLastName(), index.getNewName(), index.getNewPosition());
+                indexFileManager.updateIndex(lastName, newName, newPosition);
 
                 return ResponseEntity.ok("Filme atualizado com sucesso.");
             } else {

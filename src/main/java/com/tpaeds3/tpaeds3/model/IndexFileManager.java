@@ -16,13 +16,13 @@ public class IndexFileManager {
     }
 
 
-    public boolean writeIndex(String key, long position) throws IOException {
+    public boolean writeIndex(String key, int movieId) throws IOException {
         try {
             int keyLength = key.getBytes(StandardCharsets.UTF_8).length;
             
             // Soma dois bytes para o tamanho da string
             // Padrão da biblioteca de read write do arquivo
-            int recordSize = keyLength + Long.BYTES + 2; 
+            int recordSize = keyLength + Integer.BYTES + 2; 
     
             indexFile.seek(indexFile.length()); 
     
@@ -32,7 +32,7 @@ public class IndexFileManager {
     
             indexFile.writeUTF(key);
     
-            indexFile.writeLong(position);
+            indexFile.writeInt(movieId);
     
             return true;
         } catch (Exception e) {
@@ -42,7 +42,7 @@ public class IndexFileManager {
     
     
 
-    public long findPositionById(String key) throws IOException {
+    public int findIdByMovieName(String name) throws IOException {
         while (indexFile.getFilePointer() < indexFile.length()) {
             
             byte recordStatus = indexFile.readByte();  // Lê a lápide
@@ -53,15 +53,15 @@ public class IndexFileManager {
             // Lê a chave (nome do filme)
             String movieName = indexFile.readUTF();
     
-            // Lê a posição (endereço)
-            long position = indexFile.readLong();
+            // Lê o id do filme
+            int movieId = indexFile.readInt();
     
             // Posição do próximo registro:
             long nextRecordPosition = currentPointer + recordSize;
     
             // Se o registro for válido e a chave for igual, retorne a posição
-            if (recordStatus == VALID_RECORD && movieName.equals(key)) {
-                return position;
+            if (recordStatus == VALID_RECORD && movieName.equals(name)) {
+                return movieId;
             }
     
             // Move o ponteiro para o próximo registro 
@@ -71,6 +71,7 @@ public class IndexFileManager {
         return -1;  // Retorna -1 se a chave não for encontrada
     }
 
+    
     public long findIndexPositionByKey(String key) throws IOException {
         // Reinicia o ponteiro para o início do arquivo de índice
         indexFile.seek(0); 
@@ -82,18 +83,18 @@ public class IndexFileManager {
             // Lê a chave (nome do filme)
             String movieName = indexFile.readUTF();
     
-            // Lê a posição (endereço)
+            // Lê o id do filme 
             @SuppressWarnings("unused")
-            long position = indexFile.readLong();
+            int position = indexFile.readInt();
     
             // Se o registro for válido e a chave for igual, retorne a posição
             if (recordStatus == VALID_RECORD && movieName.equals(key)) {
                 // Retorna a posição do início do registro
-                return indexFile.getFilePointer() - (Long.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2 + 4 + 1);
+                return indexFile.getFilePointer() - (Integer.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2 + 4 + 1);
             }
     
             // Move o ponteiro para o próximo registro
-            indexFile.skipBytes(recordSize - (Long.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2)); 
+            indexFile.skipBytes(recordSize - (Integer.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2)); 
         }
     
         return -1;  // Retorna -1 se a chave não for encontrada
@@ -116,37 +117,27 @@ public class IndexFileManager {
             return false; // Registro não é válido, não pode ser atualizado
         }
         
-        // Lê o tamanho do registro atual
-        int currentRecordSize = indexFile.readInt();
-        
-        // Lê a chave antiga para comparação
-        String oldKeyValue = indexFile.readUTF(); // Supondo que a chave é uma String
-    
+        // Lê o id do filme
+        int movieId = indexFile.readInt();
+
         int newKeyLength = newKey.getBytes(StandardCharsets.UTF_8).length;
-        int newRecordSize = newKeyLength + Long.BYTES + 2; // Calcula o novo tamanho do registro (nova chave e posição)
+        int oldKeyLength = oldKey.getBytes(StandardCharsets.UTF_8).length;
+        int newRecordSize = newKeyLength + Integer.BYTES + 2; // Calcula o novo tamanho do registro (nova chave e posição)
     
         // Verifica se a nova chave é maior que a antiga
-        if (newKeyLength > oldKeyValue.getBytes(StandardCharsets.UTF_8).length) {
+        if (newKeyLength > oldKeyLength) {
             // Marca o registro atual como deletado
             indexFile.seek(position); // Volta para o início do registro
             indexFile.writeByte(DELETED_RECORD); // Marca o registro como deletado
     
             // Cria um novo registro no final do arquivo
-            writeIndex(newKey, newPosition);
+            writeIndex(newKey, movieId);
         } else {
-            // Se a nova chave couber no espaço atual, atualiza diretamente
-            if (newRecordSize <= currentRecordSize) {
-                indexFile.seek(indexFile.getFilePointer() - currentRecordSize); // Volta para o início do registro atual
-                indexFile.writeByte(VALID_RECORD); // Escreve a lápide como válida
-                indexFile.writeInt(newRecordSize); // Atualiza o tamanho do registro
-                indexFile.writeUTF(newKey); // Escreve a nova chave
-                indexFile.writeLong(newPosition); // Escreve a nova posição
-            } else {
-                // Se a nova chave for maior e não couber, marca como deletado e escreve um novo
-                indexFile.seek(position); // Volta para o início do registro
-                indexFile.writeByte(DELETED_RECORD); // Marca o registro como deletado
-                writeIndex(newKey, newPosition); // Cria um novo registro com a nova chave
-            }
+            indexFile.seek(position); // Volta para o início do registro atual
+            indexFile.writeByte(VALID_RECORD); // Escreve a lápide como válida
+            indexFile.writeInt(newRecordSize); // Atualiza o tamanho do registro
+            indexFile.writeUTF(newKey); // Escreve a nova chave
+            indexFile.writeInt(movieId); // Reescreve o id do filme
         }
     
         return true;
