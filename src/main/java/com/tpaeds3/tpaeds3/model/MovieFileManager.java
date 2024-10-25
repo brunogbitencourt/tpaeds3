@@ -20,12 +20,18 @@ public class MovieFileManager {
         this.file = file;
     }
 
-    public long writeMovie(Movie movie) throws IOException {
+    public long writeMovie(Movie movie, Integer id) throws IOException {
         long position = 1;
         try {
             file.seek(0); // Set cursor to beginning
             int lastID = file.readInt();
-            movie.setId(lastID + 1); // Define o novo ID automaticamente
+
+            // Se o ID for nulo, define um novo ID automaticamente
+            if (id == null) {
+                movie.setId(lastID + 1); // Define o novo ID automaticamente
+            } else {
+                movie.setId(id); // Usa o ID fornecido
+            }
 
             // Parse objet to byte array
             byte[] movieBytes = movie.toByteArray();
@@ -148,7 +154,7 @@ public class MovieFileManager {
         return movies;
     }
 
-    public boolean deleteMovie(int id) throws IOException {
+    public String deleteMovie(int id) throws IOException {
         file.seek(4); // Pula o cabeçalho (último ID)
 
         while (file.getFilePointer() < file.length()) {
@@ -166,9 +172,10 @@ public class MovieFileManager {
                 movie.fromByteArray(movieBytes);
 
                 if (movie.getId() == id) {
+                    String movieName = movie.getName(); // Captura o nome do filme antes de deletar
                     file.seek(recordPosition);
                     file.writeByte(DELETED_RECORD); // Marca o registro como deletado
-                    return true;
+                    return movieName;
                 }
 
                 file.seek(currentPosition + recordSize); // Avança para o próximo registro
@@ -177,11 +184,12 @@ public class MovieFileManager {
             }
         }
 
-        return false; // Retorna false se o filme não for encontrado
+        return null; // Retorna null se o filme não for encontrado
     }
  
-    public boolean updateMovie(int movieId, Map<String, Object> updates) throws IOException {
+    public Index updateMovie(int movieId, Map<String, Object> updates) throws IOException {
         file.seek(4); // Pular o cabeçalho (último ID)
+        Index index = null;
 
         while (file.getFilePointer() < file.length()) {
             long recordPosition = file.getFilePointer();
@@ -196,11 +204,10 @@ public class MovieFileManager {
                 movie.fromByteArray(movieBytes);
 
                 if (movie.getId() == movieId) {
-                    // Aplicar atualizações ao filme
-                    applyUpdates(movie, updates);
+                    // Aplicar atualizações ao filme e capturar lastName e newName
+                    index = applyUpdates(movie, updates);
                     
                     byte[] updatedMovieBytes = movie.toByteArray();
-
                     // Se o novo filme couber no espaço do registro original, apenas sobrescreva
                     if (updatedMovieBytes.length <= recordSize) {
                         // Posicionar o ponteiro para o início do registro
@@ -214,16 +221,22 @@ public class MovieFileManager {
                         file.writeByte(DELETED_RECORD); // Marca como deletado
 
                         // Escreve o novo registro no final do arquivo
-                        movie.setId(movieId); // Mantém o ID original
-                        return writeMovie(movie) == -1  ? false : true ; // Escreve o novo filme no final
+                        Long newPosition = writeMovie(movie, movieId); // Escreve o novo filme no final
+                        index.setNewPosition(newPosition);
                     }
-                    return true;
+
+                    
+                    return index;
                 }
             } else {
                 file.skipBytes(recordSize); // Pular os registros deletados
             }
         }
-        return false; // Retorna false se o filme não for encontrado
+        return index; // Retorna false se o filme não for encontrado
+    }
+
+    public long writeMovie(Movie movie) throws IOException {
+        return writeMovie(movie, null); // Chama a versão com ID passando null
     }
 
 
@@ -246,21 +259,33 @@ public class MovieFileManager {
         return null;
     }
 
-    private void applyUpdates(Movie movie, Map<String, Object> updates) {
+    private Index applyUpdates(Movie movie, Map<String, Object> updates) {
+        Index index = new Index();
+        index.setNewPosition((long) -1);
+
         if (updates.containsKey("name")) {
-            movie.setName((String) updates.get("name"));
+            index.setLastName(movie.getName());
+            String newName = (String) updates.get("name");
+            index.setNewName(newName);
+            movie.setName(newName);
+        } else {
+            String name = movie.getName();
+            index.setLastName(name);
+            index.setNewName(name);
         }
+
         if (updates.containsKey("date")) {
-        String dateString = (String) updates.get("date");
-        try {
-            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd"); // Ajuste o formato conforme necessário
-            Date date = dateFormat.parse(dateString);
-            movie.setDate(date);
-        } catch (ParseException e) {
-            // Log e tratar erro de conversão de data
-            e.printStackTrace();
+            String dateString = (String) updates.get("date");
+            try {
+                SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd"); // Ajuste o formato conforme necessário
+                Date date = dateFormat.parse(dateString);
+                movie.setDate(date);
+            } catch (ParseException e) {
+                // Log e tratar erro de conversão de data
+                e.printStackTrace();
+            }
         }
-    }
+
         if (updates.containsKey("score")) {
             movie.setScore((Double) updates.get("score"));
         }
@@ -291,6 +316,10 @@ public class MovieFileManager {
         if (updates.containsKey("country")) {
             movie.setCountry((String) updates.get("country"));
         }
+
+        // Retorna o Map com lastName e newName (se a chave "name" foi atualizada)
+        return index;
     }
+
     
 }
