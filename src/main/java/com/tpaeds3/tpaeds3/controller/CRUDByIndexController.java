@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tpaeds3.tpaeds3.model.IndexFileManager;
+import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
@@ -25,23 +26,37 @@ public class CRUDByIndexController {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
+    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
 
     
     @GetMapping("/getMovieByName")
     public ResponseEntity<Movie> getMovieByName(@RequestParam String param) throws FileNotFoundException {
         try{
+            // Abre o arquivo de indice indireto Nome -> id
             RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "r");
             IndexFileManager indexFileManager =  new IndexFileManager(binaryIndexFile);
            
-
-            long position = indexFileManager.findPositionById(param);
-            if (position == -1 )
+            // Busca o id do filme pelo nome no arquivo indireto
+            int movieId = indexFileManager.findIdByMovieName(param);
+            if (movieId == -1 )
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
 
+            // Abre o arquivo de índice para leitura
+            RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "r");
+            IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+
+            // Busca a posição do filme pelo ID
+            long moviePosition = indexByIdFileManager.findPositionById(movieId);
+            if (moviePosition == -1) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            // Abre o banco de dados
             RandomAccessFile binaryMovieFile = new RandomAccessFile(FILE_PATH, "r");            
             MovieFileManager movieFileManager = new MovieFileManager(binaryMovieFile);
 
-            Movie movie = movieFileManager.getMoveByPosition(position); 
+            // Busca o filme pela posição
+            Movie movie = movieFileManager.getMovieByPosition(moviePosition); 
 
             return ResponseEntity.ok(movie);
         
@@ -55,5 +70,35 @@ public class CRUDByIndexController {
         }
     }
     
+    @GetMapping("/getMovieById")
+    public ResponseEntity<Movie> getMovieById(@RequestParam int id) throws FileNotFoundException {
+        try {
+            // Abre o arquivo de índice para leitura
+            RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "r");
+            IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+
+            // Busca a posição do filme pelo ID
+            long position = indexByIdFileManager.findPositionById(id);
+            if (position == -1) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
+            }
+
+            // Abre o arquivo de filmes para leitura
+            RandomAccessFile binaryMovieFile = new RandomAccessFile(FILE_PATH, "r");
+            MovieFileManager movieFileManager = new MovieFileManager(binaryMovieFile);
+
+            // Recupera o filme pela posição encontrada
+            Movie movie = movieFileManager.getMovieByPosition(position);
+
+            return ResponseEntity.ok(movie);
+        
+        } catch (FileNotFoundException e) {
+            throw e;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
 
 }

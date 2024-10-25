@@ -29,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.tpaeds3.tpaeds3.model.IndexFileManager;
+import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
@@ -43,6 +44,7 @@ public class FileController {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
+    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
 
 
     @PostMapping("/createDatabase")
@@ -54,9 +56,11 @@ public class FileController {
         try {
             RandomAccessFile binaryDataFile = new RandomAccessFile(FILE_PATH, "rw");
             RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
+            RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
             
             MovieFileManager movieFileManager = new MovieFileManager(binaryDataFile);
             IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
+            IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
 
             List<Movie> movies = parseCSV(file); // Converte o csv numa lista de objetos 
             long position;
@@ -66,7 +70,9 @@ public class FileController {
 
             for (Movie movie : movies) {
                 position = movieFileManager.writeMovie(movie);
-                indexFileManager.writeIndex(movie.getName(), position);                
+                int movieId = movie.getId();
+                indexByIdFileManager.writeIndex(movieId, position);                
+                indexFileManager.writeIndex(movie.getName(), movieId);                
             }
 
             // Retorn bynary file to API

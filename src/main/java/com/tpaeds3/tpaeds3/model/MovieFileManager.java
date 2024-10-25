@@ -20,6 +20,11 @@ public class MovieFileManager {
         this.file = file;
     }
 
+    
+    public long writeMovie(Movie movie) throws IOException {
+        return writeMovie(movie, null); // Chama a versão com ID passando null
+    }
+
     public long writeMovie(Movie movie, Integer id) throws IOException {
         long position = 1;
         try {
@@ -51,7 +56,9 @@ public class MovieFileManager {
 
             // Update last ID with last id
             file.seek(0);
-            file.writeInt(movie.getId());
+            if (id == null) {
+                file.writeInt(movie.getId());
+            }
             return position;
 
         } catch (Exception e) {
@@ -215,6 +222,7 @@ public class MovieFileManager {
 
                         // Escrever o filme atualizado no mesmo espaço
                         file.write(updatedMovieBytes);
+                        index.setNewPosition(recordPosition);
                     } else {
                         // Se o filme atualizado não couber, marcar como deletado e escrever um novo registro no final
                         file.seek(recordPosition);
@@ -235,12 +243,7 @@ public class MovieFileManager {
         return index; // Retorna false se o filme não for encontrado
     }
 
-    public long writeMovie(Movie movie) throws IOException {
-        return writeMovie(movie, null); // Chama a versão com ID passando null
-    }
-
-
-    public  Movie getMoveByPosition(long position) throws IOException{
+    public  Movie getMovieByPosition(long position) throws IOException{
 
         file.seek(position);
 
