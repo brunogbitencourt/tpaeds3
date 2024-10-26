@@ -45,6 +45,8 @@ public class FileController {
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
     private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
 
 
     @PostMapping("/createDatabase")
@@ -57,10 +59,14 @@ public class FileController {
             RandomAccessFile binaryDataFile = new RandomAccessFile(FILE_PATH, "rw");
             RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
             RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
+            RandomAccessFile binaryIndexByGenreFile = new RandomAccessFile(INDEX_BY_GENRE, "rw");
+            RandomAccessFile binaryIndexByGenreMultlistFile = new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw");
             
             MovieFileManager movieFileManager = new MovieFileManager(binaryDataFile);
             IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
             IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+            IndexFileManager indexByGenreFileManager = new IndexFileManager(binaryIndexByGenreFile);
+            IndexFileManager indexByGenreMultlistFile = new IndexFileManager(binaryIndexByGenreMultlistFile);
 
             List<Movie> movies = parseCSV(file); // Converte o csv numa lista de objetos 
             long position;
@@ -71,8 +77,13 @@ public class FileController {
             for (Movie movie : movies) {
                 position = movieFileManager.writeMovie(movie);
                 int movieId = movie.getId();
-                indexByIdFileManager.writeIndex(movieId, position);                
-                indexFileManager.writeIndex(movie.getName(), movieId);                
+                long indexIdPosition = indexByIdFileManager.writeIndex(movieId, position);                
+                indexFileManager.writeIndex(movie.getName(), movieId);  
+                for (String genre : movie.getGenre()) {
+                    long genrePosition = indexByGenreFileManager.writeGenreIndex(genre);
+                    long multilistHead = indexByGenreFileManager.getMultlistHead(genrePosition);
+                    indexByGenreMultlistFile.writeMultlistIndex(movieId, multilistHead, indexIdPosition, genrePosition, binaryIndexByGenreFile);
+                }            
             }
 
             // Retorn bynary file to API

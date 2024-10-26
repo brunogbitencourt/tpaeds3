@@ -12,6 +12,13 @@ import java.util.Map;
 
 public class MovieFileManager {
 
+    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
+    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
+
+
     private RandomAccessFile file;
     private static final byte VALID_RECORD = 0x01;
     private static final byte DELETED_RECORD = 0x00;
@@ -261,6 +268,53 @@ public class MovieFileManager {
     
         return null;
     }
+
+    public List<Movie> readMoviesByGenre(String genre, IndexFileManager genreIndexFile,IndexFileManager multListGenreFile, IndexIdFileManager idIndexFile) throws IOException {
+        List<Movie> movies = new ArrayList<>();
+        
+        RandomAccessFile binaryDataFile = new RandomAccessFile(FILE_PATH, "rw");
+        RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
+        RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
+        RandomAccessFile binaryIndexByGenreFile = new RandomAccessFile(INDEX_BY_GENRE, "rw");
+        RandomAccessFile binaryIndexByGenreMultlistFile = new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw");
+            
+        MovieFileManager movieFileManager = new MovieFileManager(binaryDataFile);
+        IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
+        IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+        IndexFileManager indexByGenreFileManager = new IndexFileManager(binaryIndexByGenreFile);
+        IndexFileManager indexByGenreMultlistFile = new IndexFileManager(binaryIndexByGenreMultlistFile);
+
+        long genrePosition = indexByGenreFileManager.findGenrePosition(genre);
+        long nextRecordPosition = indexByGenreFileManager.getMultlistHead(genrePosition);
+
+        while(nextRecordPosition != -1){
+            binaryIndexByGenreMultlistFile.seek(nextRecordPosition); 
+            byte isValid = binaryIndexByGenreMultlistFile.readByte();
+            int  moveID  = binaryIndexByGenreMultlistFile.readInt();
+            binaryIndexByGenreMultlistFile.readLong();
+            nextRecordPosition = binaryIndexByGenreMultlistFile.readLong();
+            int  count = binaryIndexByGenreMultlistFile.readInt();
+
+            if(isValid == VALID_RECORD){                    
+                    long dbPosistion = indexByIdFileManager.findIndexPositionByKey(moveID);
+                    file.seek(dbPosistion);
+
+                    byte recordStatus = file.readByte();
+                    int recordSize = file.readInt();
+
+                    if (recordStatus == VALID_RECORD) {
+                        byte[] movieBytes = new byte[recordSize];
+                        file.readFully(movieBytes);
+                        Movie movie = new Movie();
+                        movie.fromByteArray(movieBytes);
+                        movies.add(movie);
+                    }
+            }         
+        }
+        
+        return movies;
+    }
+
 
     private Index applyUpdates(Movie movie, Map<String, Object> updates) {
         Index index = new Index();

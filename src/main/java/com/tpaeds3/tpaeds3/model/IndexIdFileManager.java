@@ -16,21 +16,65 @@ public class IndexIdFileManager {
     }
 
 
-    public boolean writeIndex(int key, long position) throws IOException {
+    public long writeIndex(int key, long position) throws IOException {
         try {
-            indexFile.seek(indexFile.length());
+            long positionInserted = indexFile.length();
+            indexFile.seek(positionInserted);
 
             indexFile.writeByte(VALID_RECORD);       // Escreve o status do registro (1 byte)
             indexFile.writeInt(key);                 // Escreve a chave (int) (4 bytes)
             indexFile.writeLong(position);           // Escreve a posição (long) (8 bytes)
     
-            return true;
+            return positionInserted;
         } catch (Exception e) {
-            return false;
+            return -1;
         }
     }
+
+    public long writeMultlistIndex(int key, long initialPosition, long indexIdPosition) throws IOException {
+        long lastPosition = findEndingMultlist(initialPosition);
     
+        // Define a posição para o final do arquivo
+        long position = indexFile.length();
     
+        // Se a lista tiver elementos, atualiza o nextRecord do último registro
+        if (lastPosition != -1) {
+            indexFile.seek(lastPosition + 13); // Pula a lápide (1 byte), o ID do filme (4 bytes) e o indexIdPosition (8 bytes)
+            indexFile.writeLong(position);     // Atualiza o ponteiro do último bloco para a nova posição
+        }        
+    
+        // Escreve o novo bloco na posição final do arquivo
+        indexFile.seek(position);
+        indexFile.writeByte(VALID_RECORD);    // Marca o registro como válido
+        indexFile.writeInt(key);              // Escreve o ID do filme
+        indexFile.writeLong(indexIdPosition); // Escreve a posição do filme no arquivo indice
+        indexFile.writeLong(-1);              // Define o próximo bloco como -1 (final da lista)
+    
+        return position; // Retorna a posição onde o novo bloco foi escrito
+    }
+    
+
+    public long findEndingMultlist(long initialPosition) throws IOException{
+
+        long position = initialPosition;
+        long lastPosition = -1;
+        // Enquanto posicao nao for -1
+        while(position != -1){
+            indexFile.seek(position);
+            indexFile.readByte();
+            indexFile.readInt();
+            indexFile.readLong();
+            long nextRecord = indexFile.readLong();
+            lastPosition = position;
+            position = position + nextRecord;
+        }       
+
+    
+        return lastPosition;
+    }   
+
+    
+
 
     public long findPositionById(int key) throws IOException {
         indexFile.seek(0); // Reinicia o ponteiro no início do arquivo
@@ -54,13 +98,15 @@ public class IndexIdFileManager {
         indexFile.seek(0);
 
         while (indexFile.getFilePointer() < indexFile.length()) {
+            long currenPosition = indexFile.getFilePointer();
             byte recordStatus = indexFile.readByte();
             int storedKey = indexFile.readInt();
             long position = indexFile.readLong();
 
             if (recordStatus == VALID_RECORD && storedKey == key) {
                 // Retorna a posição do início do registro
-                return indexFile.getFilePointer() - RECORD_SIZE;
+                //return indexFile.getFilePointer() - RECORD_SIZE;
+                return position;
             }
         }
 

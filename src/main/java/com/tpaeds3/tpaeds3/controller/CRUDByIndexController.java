@@ -3,6 +3,9 @@ package com.tpaeds3.tpaeds3.controller;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +30,8 @@ public class CRUDByIndexController {
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
     private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
 
     
     @GetMapping("/getMovieByName")
@@ -97,6 +102,38 @@ public class CRUDByIndexController {
         } catch (IOException e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
+    @GetMapping("/getMoviesByGenre")
+    public ResponseEntity<Map<String, Object>> getAllMovie(
+            @RequestParam String genre) {
+        try {
+            
+            RandomAccessFile binaryDataFile = new RandomAccessFile(FILE_PATH, "rw");
+            RandomAccessFile binaryIndexFile = new RandomAccessFile(INDEX1_PATH, "rw");
+            RandomAccessFile binaryIndexByIdFile = new RandomAccessFile(INDEX_BY_ID, "rw");
+            RandomAccessFile binaryIndexByGenreFile = new RandomAccessFile(INDEX_BY_GENRE, "rw");
+            RandomAccessFile binaryIndexByGenreMultlistFile = new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw");
+            
+            MovieFileManager movieFileManager = new MovieFileManager(binaryDataFile);
+            IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
+            IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
+            IndexFileManager indexByGenreFileManager = new IndexFileManager(binaryIndexByGenreFile);
+            IndexFileManager indexByGenreMultlistFile = new IndexFileManager(binaryIndexByGenreMultlistFile);
+
+
+            List<Movie> movies = movieFileManager.readMoviesByGenre(genre, indexByGenreFileManager, indexByGenreMultlistFile, indexByIdFileManager);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("records", movies);
+            response.put("totalRecords", movies.size());
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null); // Retorna erro 500
         }
     }
 
