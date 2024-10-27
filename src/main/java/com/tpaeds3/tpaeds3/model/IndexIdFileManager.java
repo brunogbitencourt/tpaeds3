@@ -81,10 +81,10 @@ public class IndexIdFileManager {
             long position = indexFile.readLong(); // Lê a posição
 
             if (recordStatus == VALID_RECORD && storedKey == key) {
-                return currentPosition;
+                return position;
             }
 
-            indexFile.seek(currentPosition + (RECORD_SIZE - (1 + Integer.BYTES + Long.BYTES)));
+            indexFile.seek(currentPosition + 13);
         }
 
         return -1;
@@ -101,7 +101,7 @@ public class IndexIdFileManager {
 
             if (recordStatus == VALID_RECORD && storedKey == key) {
                 // Retorna a posição de armazenamento da chave
-                return currentPosition;
+                return currentPosition - 13;
             }
 
             // Avança o ponteiro para o próximo registro (1 byte para o status + 4 bytes
@@ -113,7 +113,7 @@ public class IndexIdFileManager {
     }
 
     public long findDBPositionByIndexPosition(long position) throws IOException {
-        indexFile.seek(0); // Começa do início do arquivo
+        indexFile.seek(position); // Começa do início do arquivo
 
         byte recordStatus = indexFile.readByte();
         int storedKey = indexFile.readInt();

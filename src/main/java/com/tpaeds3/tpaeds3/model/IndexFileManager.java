@@ -135,8 +135,9 @@ public class IndexFileManager {
             genreMultlistFile.seek(currentPosition);
             byte isValid = genreMultlistFile.readByte();
             int currentMovieId = genreMultlistFile.readInt();
+            long indexPosition = genreMultlistFile.readLong();  
             long nextPosition = genreMultlistFile.readLong();
-    
+            
             if (isValid == VALID_RECORD && currentMovieId == movieId) {
                 // Remover o filme, ajustando o ponteiro do nó anterior
                 if (previousPosition == -1) {

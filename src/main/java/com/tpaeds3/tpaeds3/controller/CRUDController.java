@@ -87,10 +87,26 @@ public class CRUDController {
         try {
             resources = initializeFiles();
             MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
+            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
+            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
+            IndexFileManager indexByGenreFileManager = (IndexFileManager) resources.get("indexByGenreFileManager");
+            IndexFileManager indexByGenreMultlistFile = (IndexFileManager) resources.get("indexByGenreMultlistFile");
 
-            if (movieFileManager.writeMovie(movie) != -1) {
+            long position = movieFileManager.writeMovie(movie);
+            if (position != -1) {
+                int movieId = movie.getId();
+                long indexIdPosition = indexByIdFileManager.writeIndex(movieId, position);
+                indexFileManager.writeIndex(movie.getName(), movieId);
+                for (String genre : movie.getGenre()) {
+                    long genrePosition = indexByGenreFileManager.writeGenreIndex(genre);
+                    long multilistHead = indexByGenreFileManager.getMultlistHead(genrePosition);
+                    indexByGenreMultlistFile.writeMultlistIndex(movieId, multilistHead, indexIdPosition, genrePosition, (RandomAccessFile) resources.get("binaryIndexByGenreFile"));
+
+                }
+
+
                 return ResponseEntity.status(HttpStatus.CREATED)
-                        .header("/entrega01", "/getMovie/" + movie.getId())
+                        .header("/CRUDByIndex", "/getMovie/" + movie.getId())
                         .body(movie);
             } else {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(movie);
