@@ -112,6 +112,24 @@ public class IndexIdFileManager {
         return -1; // Retorna -1 se a chave não for encontrada
     }
 
+    public long findDBPositionByIndexPosition(long position) throws IOException {
+        indexFile.seek(0); // Começa do início do arquivo
+
+        byte recordStatus = indexFile.readByte();
+        int storedKey = indexFile.readInt();
+        long positionDB = indexFile.readLong();
+
+        if (recordStatus == VALID_RECORD && storedKey == storedKey) {
+                // Retorna a posição de armazenamento da chave
+                return positionDB;
+        }
+
+
+        return -1; // Retorna -1 se a chave não for encontrada
+    }
+
+
+
     public boolean updateIndex(int movieId, long newPosition) throws IOException {
         long position = findIndexPositionByKey(movieId);
 

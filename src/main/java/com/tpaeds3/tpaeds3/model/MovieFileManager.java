@@ -295,8 +295,8 @@ public class MovieFileManager {
 
             if(isValid == VALID_RECORD){                    
                     long indexPosition = indexByIdFileManager.findIndexPositionByKey(moveID);
-                    long dbPosition = indexPosition.find
-                    file.seek(dbPosistion);
+                    long dbPosition = indexByIdFileManager.findDBPositionByIndexPosition(indexPosition);
+                    file.seek(dbPosition);
 
                     byte recordStatus = file.readByte();
                     int recordSize = file.readInt();
