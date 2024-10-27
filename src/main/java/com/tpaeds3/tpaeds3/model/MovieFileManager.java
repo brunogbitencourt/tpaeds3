@@ -204,51 +204,49 @@ public class MovieFileManager {
     public Index updateMovie(int movieId, Map<String, Object> updates) throws IOException {
         file.seek(4); // Pular o cabeçalho (último ID)
         Index index = null;
-
+    
         while (file.getFilePointer() < file.length()) {
             long recordPosition = file.getFilePointer();
             byte recordStatus = file.readByte();
             int recordSize = file.readInt();
-
+    
             if (recordStatus == VALID_RECORD) {
                 byte[] movieBytes = new byte[recordSize];
                 file.readFully(movieBytes);
-
+    
                 Movie movie = new Movie();
                 movie.fromByteArray(movieBytes);
-
+    
                 if (movie.getId() == movieId) {
                     // Aplicar atualizações ao filme e capturar lastName e newName
                     index = applyUpdates(movie, updates);
                     
                     byte[] updatedMovieBytes = movie.toByteArray();
-                    // Se o novo filme couber no espaço do registro original, apenas sobrescreva
                     if (updatedMovieBytes.length <= recordSize) {
                         // Posicionar o ponteiro para o início do registro
                         file.seek(recordPosition + 1 + 4); // Pular o byte de status e o int do tamanho
-
-                        // Escrever o filme atualizado no mesmo espaço
                         file.write(updatedMovieBytes);
                         index.setNewPosition(recordPosition);
                     } else {
-                        // Se o filme atualizado não couber, marcar como deletado e escrever um novo registro no final
+                        // Marcar o registro original como deletado
                         file.seek(recordPosition);
-                        file.writeByte(DELETED_RECORD); // Marca como deletado
-
+                        file.writeByte(DELETED_RECORD); // Tenta marcar como deletado
+    
                         // Escreve o novo registro no final do arquivo
-                        Long newPosition = writeMovie(movie, movieId); // Escreve o novo filme no final
+                        long newPosition = writeMovie(movie, movie.getId()); // Supondo que writeMovie retorna a posição final
                         index.setNewPosition(newPosition);
                     }
-
-                    
+    
                     return index;
                 }
             } else {
-                file.skipBytes(recordSize); // Pular os registros deletados
+                // Pular o registro deletado
+                file.skipBytes(recordSize);
             }
         }
-        return index; // Retorna false se o filme não for encontrado
+        return index; // Retorna null se o filme não for encontrado
     }
+    
 
     public  Movie getMovieByPosition(long position) throws IOException{
 
@@ -291,12 +289,13 @@ public class MovieFileManager {
             binaryIndexByGenreMultlistFile.seek(nextRecordPosition); 
             byte isValid = binaryIndexByGenreMultlistFile.readByte();
             int  moveID  = binaryIndexByGenreMultlistFile.readInt();
-            binaryIndexByGenreMultlistFile.readLong();
+            long example = binaryIndexByGenreMultlistFile.readLong();
             nextRecordPosition = binaryIndexByGenreMultlistFile.readLong();
-            int  count = binaryIndexByGenreMultlistFile.readInt();
+            //int  count = binaryIndexByGenreMultlistFile.readInt();
 
             if(isValid == VALID_RECORD){                    
-                    long dbPosistion = indexByIdFileManager.findIndexPositionByKey(moveID);
+                    long indexPosition = indexByIdFileManager.findIndexPositionByKey(moveID);
+                    long dbPosition = indexPosition.find
                     file.seek(dbPosistion);
 
                     byte recordStatus = file.readByte();

@@ -15,6 +15,10 @@ public class IndexFileManager {
         this.indexFile = indexFile;
     }
 
+    public RandomAccessFile getIndexFile() {
+        return this.indexFile;
+    }
+
 
     public long writeIndex(String key, int movieId) throws IOException {
         try {
@@ -100,6 +104,70 @@ public class IndexFileManager {
     
         return -1;  // Retorna -1 se a chave não for encontrada
     }
+
+    public long updateGenreIndex(String genre, int movieId, long movieIndexPosition, RandomAccessFile genreIndexFile, RandomAccessFile genreMultlistFile) throws IOException {
+        long genrePosition  = findGenrePosition(genre);
+
+        if(genrePosition == -1){
+            genrePosition = writeNewGenre(genre, genreIndexFile);
+        }
+
+        long listHead = getMultlistHead(genrePosition);
+
+        long newListPosition = writeMultlistIndex(movieId, listHead, movieIndexPosition, genrePosition, genreIndexFile, genreMultlistFile);
+
+        updateGenreListPointer(genreIndexFile, genrePosition, newListPosition);
+
+        return newListPosition;
+
+    }
+
+
+    public void removeMovieFromGenre(String genre, int movieId, RandomAccessFile genreIndexFile, RandomAccessFile genreMultlistFile) throws IOException {
+        long genrePosition = findGenrePosition(genre);
+        if (genrePosition == -1) return;  // Gênero não existe no índice
+    
+        // Obter o cabeçalho da lista encadeada
+        long currentPosition = getMultlistHead(genrePosition);
+        long previousPosition = -1;
+    
+        while (currentPosition != -1) {
+            genreMultlistFile.seek(currentPosition);
+            byte isValid = genreMultlistFile.readByte();
+            int currentMovieId = genreMultlistFile.readInt();
+            long nextPosition = genreMultlistFile.readLong();
+    
+            if (isValid == VALID_RECORD && currentMovieId == movieId) {
+                // Remover o filme, ajustando o ponteiro do nó anterior
+                if (previousPosition == -1) {
+                    // Atualizar o cabeçalho da lista no índice de gênero
+                    updateGenreListPointer(genreIndexFile, genrePosition, nextPosition);
+                } else {
+                    // Atualizar o próximo do nó anterior
+                    genreMultlistFile.seek(previousPosition + 13); // Pula lápide, ID do filme e posição do índice do filme
+                    genreMultlistFile.writeLong(nextPosition);
+                }
+                return; // Filme removido da lista
+            }
+            // Continuar para o próximo nó
+            previousPosition = currentPosition;
+            currentPosition = nextPosition;
+        }
+    }
+    
+
+    private long writeNewGenre(String genre, RandomAccessFile genreIndexFile) throws IOException {
+        long position = genreIndexFile.length();
+        genreIndexFile.seek(position);
+    
+        genreIndexFile.writeByte(VALID_RECORD); // Marca como válido
+        genreIndexFile.writeUTF(genre);         // Escreve o gênero
+        genreIndexFile.writeLong(-1);           // Cabeçalho da lista (nenhum filme ainda)
+        genreIndexFile.writeInt(0);             // Contador de elementos
+    
+        return position;
+    }
+    
     
     
     public boolean updateIndex(String oldKey, String newKey, long newPosition) throws IOException {
@@ -187,6 +255,34 @@ public class IndexFileManager {
     
         return position; // Retorna a posição onde o novo bloco foi escrito
     }
+
+
+    public long writeMultlistIndex(int movieId, long genreListHeadPosition, long movieIDIndexPosition, long genreIndexPosition, RandomAccessFile genreIndexFile, RandomAccessFile genreIndexMultilistFile) throws IOException {
+        // Encontra o último bloco da lista encadeada para o gênero
+        long lastPosition = findEndingMultlist(genreListHeadPosition);
+    
+        // Define a posição para o novo bloco no final do arquivo
+        long position = genreIndexMultilistFile.length();
+    
+        // Se a lista já possui elementos, atualiza o ponteiro do último bloco
+        if (lastPosition != -1) {
+            genreIndexMultilistFile.seek(lastPosition + 13); // Pula a lápide (1 byte), o ID do filme (4 bytes) e o movieIndexPosition (8 bytes)
+            genreIndexMultilistFile.writeLong(position);     // Atualiza o ponteiro do último bloco para a nova posição
+        } else {
+            // Atualiza o ponteiro no índice de gêneros para o primeiro elemento da lista
+            updateGenreListPointer(genreIndexFile, genreIndexPosition, position);
+        }
+    
+        // Escreve o novo bloco na posição final do arquivo
+        genreIndexMultilistFile.seek(position);
+        genreIndexMultilistFile.writeByte(VALID_RECORD);    // Marca o registro como válido
+        genreIndexMultilistFile.writeInt(movieId);          // Escreve o ID do filme
+        genreIndexMultilistFile.writeLong(movieIDIndexPosition); // Escreve a posição do filme no arquivo índice de ID
+        genreIndexMultilistFile.writeLong(-1);              // Define o próximo bloco como -1 (final da lista)
+    
+        return position; // Retorna a posição onde o novo bloco foi escrito
+    }
+    
     
 
     public long findEndingMultlist(long initialPosition) throws IOException{
@@ -202,7 +298,7 @@ public class IndexFileManager {
             long nextRecord = indexFile.readLong();
             lastPosition = position;
             position = nextRecord;
-        }       
+        }    
 
     
         return lastPosition;
@@ -272,7 +368,7 @@ public class IndexFileManager {
         
         // Atualiza posicao
         genreIndexFile.writeLong(position);
-
+        genreIndexFile.writeInt(0);
     }
     
     
