@@ -37,7 +37,6 @@ import com.tpaeds3.tpaeds3.model.MovieFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
-
 @RestController
 @RequestMapping("/FileCreation")
 @Tag(name = "01 - Criação do Banco de Dados: ")
@@ -55,6 +54,13 @@ public class FileController {
     private Map<String, Object> initializeFiles() throws FileNotFoundException {
         Map<String, Object> resources = new HashMap<>();
 
+        // Verifica e cria as pastas caso não existam
+        createDirectoriesIfNotExist(FILE_PATH);
+        createDirectoriesIfNotExist(INDEX1_PATH);
+        createDirectoriesIfNotExist(INDEX_BY_ID);
+        createDirectoriesIfNotExist(INDEX_BY_GENRE);
+        createDirectoriesIfNotExist(INDEX_BY_GENRE_MULTLIST);
+
         resources.put("binaryDataFile", new RandomAccessFile(FILE_PATH, "rw"));
         resources.put("binaryIndexFile", new RandomAccessFile(INDEX1_PATH, "rw"));
         resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID, "rw"));
@@ -63,11 +69,25 @@ public class FileController {
 
         resources.put("movieFileManager", new MovieFileManager((RandomAccessFile) resources.get("binaryDataFile")));
         resources.put("indexFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexFile")));
-        resources.put("indexByIdFileManager", new IndexIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
-        resources.put("indexByGenreFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
-        resources.put("indexByGenreMultlistFile", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
+        resources.put("indexByIdFileManager",
+                new IndexIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
+        resources.put("indexByGenreFileManager",
+                new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
+        resources.put("indexByGenreMultlistFile",
+                new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
 
         return resources;
+    }
+
+    /**
+     * Cria as pastas para o caminho do arquivo, se não existirem.
+     */
+    private void createDirectoriesIfNotExist(String filePath) {
+        File file = new File(filePath);
+        File directory = file.getParentFile();
+        if (directory != null && !directory.exists()) {
+            directory.mkdirs(); // Cria as pastas necessárias
+        }
     }
 
     /**
@@ -139,7 +159,8 @@ public class FileController {
                 for (String genre : movie.getGenre()) {
                     long genrePosition = indexByGenreFileManager.writeGenreIndex(genre);
                     long multilistHead = indexByGenreFileManager.getMultlistHead(genrePosition);
-                    indexByGenreMultlistFile.writeMultlistIndex(movieId, multilistHead, indexIdPosition, genrePosition, (RandomAccessFile) resources.get("binaryIndexByGenreFile"));
+                    indexByGenreMultlistFile.writeMultlistIndex(movieId, multilistHead, indexIdPosition, genrePosition,
+                            (RandomAccessFile) resources.get("binaryIndexByGenreFile"));
 
                 }
             }
@@ -150,7 +171,8 @@ public class FileController {
         } catch (IOException e) {
             return handleIOException(e, null);
         } finally {
-            if (resources != null) closeFiles(resources);
+            if (resources != null)
+                closeFiles(resources);
         }
     }
 
