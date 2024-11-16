@@ -23,13 +23,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "04 - LZW: Compressão de Arquivo")
 public class CompressionController {
 
-    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String COMPRESSED_FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/compressed/";
 
     @GetMapping("/compress")
     public ResponseEntity<String> compressFile() {
         long startTime = System.nanoTime();
-        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")){
+        try (RandomAccessFile binaryFile = new RandomAccessFile(MOVIE_DB_PATH, "r")){
             // Compacta o arquivo usando LZW
             LzwManager lzwManager = new LzwManager(binaryFile);
             String compressedFileName = lzwManager.compress();
@@ -39,7 +39,7 @@ public class CompressionController {
             long durationInMillis = (endTime - startTime) / 1_000_000;
 
             // Calcula o tamanho dos arquivos original e comprimido
-            File originalFile = new File(FILE_PATH);
+            File originalFile = new File(MOVIE_DB_PATH);
             File compressedFile = new File(COMPRESSED_FILE_PATH + compressedFileName);
             long originalSize = originalFile.length();
             long compressedSize = compressedFile.length();
@@ -75,10 +75,10 @@ public class CompressionController {
             // Descompacta o arquivo
             LzwManager lzwManager = new LzwManager(null);
             byte[] compressedData = Files.readAllBytes(compressedFile.toPath());
-            String decompressedData = lzwManager.decompress(compressedData);
+            byte[] decompressedData = lzwManager.decompress(compressedData);
 
             // Substitui o arquivo movies.db pelo conteúdo descompactado
-            Files.write(Paths.get(FILE_PATH), decompressedData.getBytes());
+            Files.write(Paths.get(MOVIE_DB_PATH), decompressedData);
 
             return ResponseEntity.ok("Arquivo descompactado e substituído com sucesso!");
 

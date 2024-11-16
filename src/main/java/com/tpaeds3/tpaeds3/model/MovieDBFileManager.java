@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 
-public class MovieFileManager {
+public class MovieDBFileManager {
 
     private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
     private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
@@ -23,7 +23,7 @@ public class MovieFileManager {
     private static final byte VALID_RECORD = 0x01;
     private static final byte DELETED_RECORD = 0x00;
 
-    public MovieFileManager(RandomAccessFile file){
+    public MovieDBFileManager(RandomAccessFile file){
         this.file = file;
     }
 
@@ -267,7 +267,7 @@ public class MovieFileManager {
         return null;
     }
 
-    public List<Movie> readMoviesByGenre(String genre, IndexFileManager genreIndexFile,IndexFileManager multListGenreFile, IndexIdFileManager idIndexFile) throws IOException {
+    public List<Movie> readMoviesByGenre(String genre, IndexByNameFileManager genreIndexFile,IndexByNameFileManager multListGenreFile, IndexByIdFileManager idIndexFile) throws IOException {
         List<Movie> movies = new ArrayList<>();
         
         RandomAccessFile binaryDataFile = new RandomAccessFile(FILE_PATH, "rw");
@@ -276,11 +276,11 @@ public class MovieFileManager {
         RandomAccessFile binaryIndexByGenreFile = new RandomAccessFile(INDEX_BY_GENRE, "rw");
         RandomAccessFile binaryIndexByGenreMultlistFile = new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw");
             
-        MovieFileManager movieFileManager = new MovieFileManager(binaryDataFile);
-        IndexFileManager indexFileManager = new IndexFileManager(binaryIndexFile);
-        IndexIdFileManager indexByIdFileManager = new IndexIdFileManager(binaryIndexByIdFile);
-        IndexFileManager indexByGenreFileManager = new IndexFileManager(binaryIndexByGenreFile);
-        IndexFileManager indexByGenreMultlistFile = new IndexFileManager(binaryIndexByGenreMultlistFile);
+        MovieDBFileManager movieFileManager = new MovieDBFileManager(binaryDataFile);
+        IndexByNameFileManager indexFileManager = new IndexByNameFileManager(binaryIndexFile);
+        IndexByIdFileManager indexByIdFileManager = new IndexByIdFileManager(binaryIndexByIdFile);
+        IndexByNameFileManager indexByGenreFileManager = new IndexByNameFileManager(binaryIndexByGenreFile);
+        IndexByNameFileManager indexByGenreMultlistFile = new IndexByNameFileManager(binaryIndexByGenreMultlistFile);
 
         long genrePosition = indexByGenreFileManager.findGenrePosition(genre);
         long nextRecordPosition = indexByGenreFileManager.getMultlistHead(genrePosition);

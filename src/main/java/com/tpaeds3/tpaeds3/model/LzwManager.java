@@ -9,39 +9,33 @@ public class LzwManager {
     private static final int DICTIONARY_SIZE = 256;
     private static final String COMPRESSED_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/compressed/";
     private static final String COMPRESSED_BASE_NAME = "moviesCompressed";
+
     private final RandomAccessFile file;
 
     public LzwManager(RandomAccessFile file) throws IOException {
         this.file = file;
     }
 
-    /**
-     * Compacta o conteúdo do arquivo usando o algoritmo LZW e salva em um novo
-     * arquivo.
-     * O arquivo comprimido será salvo no caminho especificado, com um nome que
-     * inclui um número de versão.
-     * 
-     * @throws IOException caso ocorra um erro ao ler ou salvar o arquivo
-     */
     public String compress() throws IOException {
-        String data = readFileContent(file);
-        Map<String, Integer> dictionary = new HashMap<>();
-        for (int i = 0; i < DICTIONARY_SIZE; i++) {
-            dictionary.put("" + (char) i, i);
-        }
+        byte[] data = readFileContent(file);
+        // log("****Dados originais*****: ", Arrays.toString(data));
 
-        String current = "";
+        Map<List<Byte>, Integer> dictionary = initializeDictionary();
+        // log("Dicionário inicializado com os primeiros 256 bytes", null);
+
         List<Integer> compressedData = new ArrayList<>();
-        int dictSize = DICTIONARY_SIZE;
+        List<Byte> current = new ArrayList<>();
 
-        for (char symbol : data.toCharArray()) {
-            String next = current + symbol;
-            if (dictionary.containsKey(next)) {
-                current = next;
+        for (byte symbol : data) {
+            List<Byte> combined = new ArrayList<>(current);
+            combined.add(symbol);
+
+            if (dictionary.containsKey(combined)) {
+                current = combined;
             } else {
                 compressedData.add(dictionary.get(current));
-                dictionary.put(next, dictSize++);
-                current = "" + symbol;
+                dictionary.put(combined, dictionary.size());
+                current = List.of(symbol);
             }
         }
 
@@ -49,103 +43,111 @@ public class LzwManager {
             compressedData.add(dictionary.get(current));
         }
 
-        byte[] compressedBytes = convertToByteArray(compressedData);
+        // log("Códigos compactados:", compressedData.toString());
 
-        // Gera o nome do arquivo incrementando a versão
-        int version = getNextVersion();
-        String compressedFileName = COMPRESSED_BASE_NAME + version + ".lzw";
-        Path compressedFilePath = Paths.get(COMPRESSED_PATH + compressedFileName);
+        byte[] compressedBytes = convertToBytes(compressedData);
+        String compressedFileName = writeCompressedFile(compressedBytes);
 
-        // Salva os dados comprimidos no arquivo
-        Files.createDirectories(compressedFilePath.getParent()); // Cria diretórios, se necessário
-        Files.write(compressedFilePath, compressedBytes);
-
+        // log("Arquivo compactado gerado:", compressedFileName);
         return compressedFileName;
     }
 
-    /**
-     * Descompacta o conteúdo do arquivo compactado fornecido e retorna como string.
-     * 
-     * @param compressedData Dados compactados em bytes
-     * @return A string original descompactada
-     * @throws IOException caso ocorra um erro durante a descompactação
-     */
-    public String decompress(byte[] compressedData) throws IOException {
-        Map<Integer, String> dictionary = new HashMap<>();
-        for (int i = 0; i < DICTIONARY_SIZE; i++) {
-            dictionary.put(i, "" + (char) i);
-        }
+    public byte[] decompress(byte[] compressedData) throws IOException {
+        // log("Bytes para descompactar: ", Arrays.toString(compressedData));
 
-        List<Integer> codes = new ArrayList<>();
-        for (int i = 0; i < compressedData.length; i += 2) {
-            int code = ((compressedData[i] & 0xFF) << 8) | (compressedData[i + 1] & 0xFF);
-            codes.add(code);
-        }
+        Map<Integer, List<Byte>> dictionary = initializeReverseDictionary();
+        // log("Dicionário reverso inicializado.", null);
 
-        StringBuilder result = new StringBuilder(dictionary.get(codes.remove(0)));
-        String currentEntry = result.toString();
-        int dictSize = DICTIONARY_SIZE;
+        List<Integer> codes = convertToIntList(compressedData);
+        // log("Códigos extraídos:", codes.toString());
+
+        ByteArrayOutputStream resultStream = new ByteArrayOutputStream();
+        List<Byte> previous = dictionary.get(codes.remove(0));
+        resultStream.write(toPrimitive(previous));
 
         for (int code : codes) {
-            String entry;
+            List<Byte> entry;
             if (dictionary.containsKey(code)) {
                 entry = dictionary.get(code);
-            } else if (code == dictSize) {
-                entry = currentEntry + currentEntry.charAt(0);
             } else {
-                throw new IOException("Código inválido durante a descompactação");
+                entry = new ArrayList<>(previous);
+                entry.add(previous.get(0));
             }
 
-            result.append(entry);
-
-            dictionary.put(dictSize++, currentEntry + entry.charAt(0));
-            currentEntry = entry;
+            resultStream.write(toPrimitive(entry));
+            List<Byte> newEntry = new ArrayList<>(previous);
+            newEntry.add(entry.get(0));
+            dictionary.put(dictionary.size(), newEntry);
+            previous = entry;
         }
 
-        return result.toString();
+        byte[] result = resultStream.toByteArray();
+        // log("Dados descompactados:", Arrays.toString(result));
+        return result;
     }
 
-    /**
-     * Lê o conteúdo do arquivo recebido e retorna como uma string.
-     * 
-     * @param file O arquivo a ser lido
-     * @return O conteúdo do arquivo em formato de string
-     * @throws IOException caso ocorra um erro ao ler o arquivo
-     */
-    private String readFileContent(RandomAccessFile file) throws IOException {
-        StringBuilder content = new StringBuilder();
-        file.seek(0); // Garante que a leitura começa do início do arquivo
-        String line;
-        while ((line = file.readLine()) != null) {
-            content.append(line).append("\n");
+    private byte[] readFileContent(RandomAccessFile file) throws IOException {
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        file.seek(0);
+        int byteRead;
+        while ((byteRead = file.read()) != -1) {
+            byteStream.write(byteRead);
         }
-        return content.toString();
+        return byteStream.toByteArray();
     }
 
-    /**
-     * Converte a lista de códigos inteiros em um array de bytes.
-     * 
-     * @param compressedData Lista de códigos inteiros
-     * @return Array de bytes representando os dados compactados
-     */
-    private byte[] convertToByteArray(List<Integer> compressedData) {
-        try (ByteArrayOutputStream byteStream = new ByteArrayOutputStream()) {
-            for (int code : compressedData) {
-                byteStream.write((code >> 8) & 0xFF); // Byte alto
-                byteStream.write(code & 0xFF); // Byte baixo
-            }
-            return byteStream.toByteArray();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return new byte[0];
+    private Map<List<Byte>, Integer> initializeDictionary() {
+        Map<List<Byte>, Integer> dictionary = new HashMap<>();
+        for (int i = 0; i < DICTIONARY_SIZE; i++) {
+            dictionary.put(List.of((byte) i), i);
         }
+        return dictionary;
     }
 
-    /**
-     * Obtém o próximo número de versão para o arquivo de compressão.
-     * 
-     * @return Próximo número de versão disponível
-     */
+    private Map<Integer, List<Byte>> initializeReverseDictionary() {
+        Map<Integer, List<Byte>> dictionary = new HashMap<>();
+        for (int i = 0; i < DICTIONARY_SIZE; i++) {
+            dictionary.put(i, List.of((byte) i));
+        }
+        return dictionary;
+    }
+
+    private List<Integer> convertToIntList(byte[] data) {
+        List<Integer> result = new ArrayList<>();
+        for (int i = 0; i < data.length; i += 2) {
+            int highByte = (data[i] & 0xFF) << 8;
+            int lowByte = data[i + 1] & 0xFF;
+            int code = highByte | lowByte;
+            result.add(code);
+        }
+        return result;
+    }
+
+    private byte[] convertToBytes(List<Integer> codes) {
+        if (codes == null || codes.isEmpty()) {
+            throw new IllegalArgumentException("A lista de códigos está vazia ou nula.");
+        }
+
+        ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+        for (int code : codes) {
+            byteStream.write((code >> 8) & 0xFF);
+            byteStream.write(code & 0xFF);
+        }
+
+        return byteStream.toByteArray();
+    }
+
+    private String writeCompressedFile(byte[] data) throws IOException {
+        int version = getNextVersion();
+        String fileName = COMPRESSED_BASE_NAME + version + ".lzw";
+        Path path = Paths.get(COMPRESSED_PATH + fileName);
+
+        Files.createDirectories(path.getParent());
+        Files.write(path, data);
+
+        return fileName;
+    }
+
     private int getNextVersion() {
         int version = 1;
         File directory = new File(COMPRESSED_PATH);
@@ -162,4 +164,16 @@ public class LzwManager {
         }
         return version;
     }
+
+    private byte[] toPrimitive(List<Byte> byteList) {
+        byte[] result = new byte[byteList.size()];
+        for (int i = 0; i < byteList.size(); i++) {
+            result[i] = byteList.get(i);
+        }
+        return result;
+    }
+
+    // private void log(String message, String data) {
+    //     System.out.println(message + (data != null ? " " + data : ""));
+    // }
 }

@@ -30,10 +30,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
-import com.tpaeds3.tpaeds3.model.IndexFileManager;
-import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
-import com.tpaeds3.tpaeds3.model.MovieFileManager;
+import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -42,11 +42,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "01 - Criação do Banco de Dados: ")
 public class FileController {
 
-    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
-    private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
-    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
-    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
-    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
+    private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String INDEX_BY_NAME_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByName.db";
+    private static final String INDEX_BY_ID_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
 
     /**
      * Inicializa os arquivos e gerenciadores necessários.
@@ -55,26 +55,28 @@ public class FileController {
         Map<String, Object> resources = new HashMap<>();
 
         // Verifica e cria as pastas caso não existam
-        createDirectoriesIfNotExist(FILE_PATH);
-        createDirectoriesIfNotExist(INDEX1_PATH);
-        createDirectoriesIfNotExist(INDEX_BY_ID);
-        createDirectoriesIfNotExist(INDEX_BY_GENRE);
-        createDirectoriesIfNotExist(INDEX_BY_GENRE_MULTLIST);
+        createDirectoriesIfNotExist(MOVIE_DB_PATH);
+        createDirectoriesIfNotExist(INDEX_BY_NAME_PATH);
+        createDirectoriesIfNotExist(INDEX_BY_ID_PATH);
+        createDirectoriesIfNotExist(INDEX_BY_GENRE_PATH);
+        createDirectoriesIfNotExist(INDEX_BY_GENRE_MULTLIST_PATH);
 
-        resources.put("binaryDataFile", new RandomAccessFile(FILE_PATH, "rw"));
-        resources.put("binaryIndexFile", new RandomAccessFile(INDEX1_PATH, "rw"));
-        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID, "rw"));
-        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE, "rw"));
-        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw"));
+        resources.put("binaryMovieDBFile", new RandomAccessFile(MOVIE_DB_PATH, "rw"));
+        resources.put("binaryIndexByNameFile", new RandomAccessFile(INDEX_BY_NAME_PATH, "rw"));
+        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID_PATH, "rw"));
+        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE_PATH, "rw"));
+        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST_PATH, "rw"));
 
-        resources.put("movieFileManager", new MovieFileManager((RandomAccessFile) resources.get("binaryDataFile")));
-        resources.put("indexFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexFile")));
+        resources.put("movieDBFileManager",
+                new MovieDBFileManager((RandomAccessFile) resources.get("binaryMovieDBFile")));
+        resources.put("indexByNameFileManager",
+                new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByNameFile")));
         resources.put("indexByIdFileManager",
-                new IndexIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
+                new IndexByIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
         resources.put("indexByGenreFileManager",
-                new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
+                new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
         resources.put("indexByGenreMultlistFile",
-                new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
+                new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
 
         return resources;
     }
@@ -140,22 +142,25 @@ public class FileController {
         try {
             resources = initializeFiles();
 
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            IndexFileManager indexByGenreFileManager = (IndexFileManager) resources.get("indexByGenreFileManager");
-            IndexFileManager indexByGenreMultlistFile = (IndexFileManager) resources.get("indexByGenreMultlistFile");
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
+            IndexByNameFileManager indexByNameFileManager = (IndexByNameFileManager) resources
+                    .get("indexByNameFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            IndexByNameFileManager indexByGenreFileManager = (IndexByNameFileManager) resources
+                    .get("indexByGenreFileManager");
+            IndexByNameFileManager indexByGenreMultlistFile = (IndexByNameFileManager) resources
+                    .get("indexByGenreMultlistFile");
 
             List<Movie> movies = parseCSV(file);
-            RandomAccessFile binaryDataFile = (RandomAccessFile) resources.get("binaryDataFile");
-            binaryDataFile.seek(0); // Cursor no início
-            binaryDataFile.writeInt(0); // Escreve o Header
+            RandomAccessFile binaryMovieDBFile = (RandomAccessFile) resources.get("binaryMovieDBFile");
+            binaryMovieDBFile.seek(0); // Cursor no início
+            binaryMovieDBFile.writeInt(0); // Escreve o Header
 
             for (Movie movie : movies) {
-                long position = movieFileManager.writeMovie(movie);
+                long position = movieDBFileManager.writeMovie(movie);
                 int movieId = movie.getId();
                 long indexIdPosition = indexByIdFileManager.writeIndex(movieId, position);
-                indexFileManager.writeIndex(movie.getName(), movieId);
+                indexByNameFileManager.writeIndex(movie.getName(), movieId);
                 for (String genre : movie.getGenre()) {
                     long genrePosition = indexByGenreFileManager.writeGenreIndex(genre);
                     long multilistHead = indexByGenreFileManager.getMultlistHead(genrePosition);
@@ -166,7 +171,7 @@ public class FileController {
             }
 
             // Retorna o arquivo binário
-            return configureDownloadResponse(new File(FILE_PATH));
+            return configureDownloadResponse(new File(MOVIE_DB_PATH));
 
         } catch (IOException e) {
             return handleIOException(e, null);
@@ -179,7 +184,7 @@ public class FileController {
     @GetMapping("/getDatabase")
     public ResponseEntity<Resource> getDatabaseFile() {
         try {
-            return configureDownloadResponse(new File(FILE_PATH));
+            return configureDownloadResponse(new File(MOVIE_DB_PATH));
         } catch (FileNotFoundException e) {
             return handleIOException(e, null);
         }
@@ -188,7 +193,7 @@ public class FileController {
     @GetMapping("/getDatabaseIndex")
     public ResponseEntity<Resource> getIndexFile() {
         try {
-            return configureDownloadResponse(new File(INDEX1_PATH));
+            return configureDownloadResponse(new File(INDEX_BY_NAME_PATH));
         } catch (FileNotFoundException e) {
             return handleIOException(e, null);
         }

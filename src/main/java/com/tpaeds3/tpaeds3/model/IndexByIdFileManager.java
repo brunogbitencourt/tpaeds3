@@ -3,7 +3,7 @@ package com.tpaeds3.tpaeds3.model;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public class IndexIdFileManager {
+public class IndexByIdFileManager {
 
     private RandomAccessFile indexFile;
     private static final byte VALID_RECORD = 0x01;
@@ -11,7 +11,7 @@ public class IndexIdFileManager {
     private static final int RECORD_SIZE = Integer.BYTES + Long.BYTES + 1; // Tamanho fixo do registro: 4 + 8 + 1 = 13
                                                                            // bytes
 
-    public IndexIdFileManager(RandomAccessFile indexFile) {
+    public IndexByIdFileManager(RandomAccessFile indexFile) {
         this.indexFile = indexFile;
     }
 
@@ -75,16 +75,13 @@ public class IndexIdFileManager {
         indexFile.seek(0); // Reinicia o ponteiro no início do arquivo
 
         while (indexFile.getFilePointer() < indexFile.length()) {
-            long currentPosition = indexFile.getFilePointer();
             byte recordStatus = indexFile.readByte(); // Lê a lápide
-            int storedKey = indexFile.readInt(); // Lê a chave
-            long position = indexFile.readLong(); // Lê a posição
-
+            int storedKey = indexFile.readInt();       // Lê a chave
+            long position = indexFile.readLong();      // Lê a posição
             if (recordStatus == VALID_RECORD && storedKey == key) {
                 return position;
             }
-
-            indexFile.seek(currentPosition + 13);
+            indexFile.seek(indexFile.getFilePointer() + (RECORD_SIZE - (1 + Integer.BYTES + Long.BYTES)));
         }
 
         return -1;
@@ -94,19 +91,13 @@ public class IndexIdFileManager {
         indexFile.seek(0); // Começa do início do arquivo
 
         while (indexFile.getFilePointer() < indexFile.length()) {
-            long currentPosition = indexFile.getFilePointer();
             byte recordStatus = indexFile.readByte();
             int storedKey = indexFile.readInt();
             long position = indexFile.readLong();
-
             if (recordStatus == VALID_RECORD && storedKey == key) {
-                // Retorna a posição de armazenamento da chave
-                return currentPosition - 13;
+                // Retorna a posição do início do registro
+                return indexFile.getFilePointer() - RECORD_SIZE;
             }
-
-            // Avança o ponteiro para o próximo registro (1 byte para o status + 4 bytes
-            // para a chave + 8 bytes para a posição)
-            indexFile.seek(currentPosition + 1 + 4 + 8);
         }
 
         return -1; // Retorna -1 se a chave não for encontrada

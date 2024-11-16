@@ -20,10 +20,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tpaeds3.tpaeds3.model.Index;
-import com.tpaeds3.tpaeds3.model.IndexFileManager;
-import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
-import com.tpaeds3.tpaeds3.model.MovieFileManager;
+import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -32,28 +32,28 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "02 - Operações de Atualização de Banco : ")
 public class CRUDController {
 
-    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
-    private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
-    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
-    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
-    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
+    private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String INDEX_BY_NAME_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByName.db";
+    private static final String INDEX_BY_ID_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
     /**
      * Método auxiliar para inicializar arquivos e gerenciadores.
      */
     private Map<String, Object> initializeFiles() throws FileNotFoundException {
         Map<String, Object> resources = new HashMap<>();
 
-        resources.put("binaryFile", new RandomAccessFile(FILE_PATH, "rw"));
-        resources.put("binaryIndexFile", new RandomAccessFile(INDEX1_PATH, "rw"));
-        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID, "rw"));
-        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE, "rw"));
-        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "rw"));
+        resources.put("binaryMovieDBFile", new RandomAccessFile(MOVIE_DB_PATH, "rw"));
+        resources.put("binaryIndexByNameFile", new RandomAccessFile(INDEX_BY_NAME_PATH, "rw"));
+        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID_PATH, "rw"));
+        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE_PATH, "rw"));
+        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST_PATH, "rw"));
 
-        resources.put("movieFileManager", new MovieFileManager((RandomAccessFile) resources.get("binaryFile")));
-        resources.put("indexFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexFile")));
-        resources.put("indexByIdFileManager", new IndexIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
-        resources.put("indexByGenreFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
-        resources.put("indexByGenreMultlistFile", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
+        resources.put("movieFileManager", new MovieDBFileManager((RandomAccessFile) resources.get("binaryMovieDBFile")));
+        resources.put("indexFileManager", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByNameFile")));
+        resources.put("indexByIdFileManager", new IndexByIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
+        resources.put("indexByGenreFileManager", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
+        resources.put("indexByGenreMultlistFile", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
 
         return resources;
     }
@@ -86,16 +86,16 @@ public class CRUDController {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            IndexFileManager indexByGenreFileManager = (IndexFileManager) resources.get("indexByGenreFileManager");
-            IndexFileManager indexByGenreMultlistFile = (IndexFileManager) resources.get("indexByGenreMultlistFile");
+            MovieDBFileManager movieFileManager = (MovieDBFileManager) resources.get("movieFileManager");
+            IndexByNameFileManager indexFileManager = (IndexByNameFileManager) resources.get("indexFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            IndexByNameFileManager indexByGenreFileManager = (IndexByNameFileManager) resources.get("indexByGenreFileManager");
+            IndexByNameFileManager indexByGenreMultlistFile = (IndexByNameFileManager) resources.get("indexByGenreMultlistFile");
 
-            long position = movieFileManager.writeMovie(movie);
-            if (position != -1) {
+            long movieDBPosition = movieFileManager.writeMovie(movie);
+            if (movieDBPosition != -1) {
                 int movieId = movie.getId();
-                long indexIdPosition = indexByIdFileManager.writeIndex(movieId, position);
+                long indexIdPosition = indexByIdFileManager.writeIndex(movieId, movieDBPosition);
                 indexFileManager.writeIndex(movie.getName(), movieId);
                 for (String genre : movie.getGenre()) {
                     long genrePosition = indexByGenreFileManager.writeGenreIndex(genre);
@@ -125,9 +125,9 @@ public class CRUDController {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
+            MovieDBFileManager movieFileManager = (MovieDBFileManager) resources.get("movieFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            IndexByNameFileManager indexFileManager = (IndexByNameFileManager) resources.get("indexFileManager");
 
             String deletedMovie = movieFileManager.deleteMovie(id);
             if (deletedMovie != null) {
@@ -152,11 +152,11 @@ public class CRUDController {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
-            IndexFileManager indexByGenreFileManager = (IndexFileManager) resources.get("indexByGenreFileManager");
-            IndexFileManager indexByGenreMultlistFile = (IndexFileManager) resources.get("indexByGenreMultlistFile");
+            MovieDBFileManager movieFileManager = (MovieDBFileManager) resources.get("movieFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            IndexByNameFileManager indexFileManager = (IndexByNameFileManager) resources.get("indexFileManager");
+            IndexByNameFileManager indexByGenreFileManager = (IndexByNameFileManager) resources.get("indexByGenreFileManager");
+            IndexByNameFileManager indexByGenreMultlistFile = (IndexByNameFileManager) resources.get("indexByGenreMultlistFile");
     
             // Obter o filme atual antes da atualização para capturar os gêneros antigos
             Movie currentMovie = movieFileManager.readMovie(id);

@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tpaeds3.tpaeds3.model.IndexFileManager;
-import com.tpaeds3.tpaeds3.model.IndexIdFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
-import com.tpaeds3.tpaeds3.model.MovieFileManager;
+import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -28,27 +28,27 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "03 - Operações de Consulta: ")
 public class SearchController {
 
-    private static final String FILE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
-    private static final String INDEX1_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/index01.db";
-    private static final String INDEX_BY_ID = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
-    private static final String INDEX_BY_GENRE = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
-    private static final String INDEX_BY_GENRE_MULTLIST = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
+    private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
+    private static final String INDEX_BY_NAME_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByName.db";
+    private static final String INDEX_BY_ID_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexById.db";
+    private static final String INDEX_BY_GENRE_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenre.db";
+    private static final String INDEX_BY_GENRE_MULTLIST_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/index/indexByGenreMultlist.db";
 
     // Método Auxilia na inicialização de arquivosde índice
     private Map<String, Object> initializeFiles() throws FileNotFoundException {
         Map<String, Object> resources = new HashMap<>();
 
-        resources.put("binaryFile", new RandomAccessFile(FILE_PATH, "r"));
-        resources.put("binaryIndexFile", new RandomAccessFile(INDEX1_PATH, "r"));
-        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID, "r"));
-        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE, "r"));
-        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST, "r"));
+        resources.put("binaryMovieDBFile", new RandomAccessFile(MOVIE_DB_PATH, "r"));
+        resources.put("binaryIndexByNameFile", new RandomAccessFile(INDEX_BY_NAME_PATH, "r"));
+        resources.put("binaryIndexByIdFile", new RandomAccessFile(INDEX_BY_ID_PATH, "r"));
+        resources.put("binaryIndexByGenreFile", new RandomAccessFile(INDEX_BY_GENRE_PATH, "r"));
+        resources.put("binaryIndexByGenreMultlistFile", new RandomAccessFile(INDEX_BY_GENRE_MULTLIST_PATH, "r"));
 
-        resources.put("movieFileManager", new MovieFileManager((RandomAccessFile) resources.get("binaryFile")));
-        resources.put("indexFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexFile")));
-        resources.put("indexByIdFileManager", new IndexIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
-        resources.put("indexByGenreFileManager", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
-        resources.put("indexByGenreMultlistFile", new IndexFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
+        resources.put("movieDBFileManager", new MovieDBFileManager((RandomAccessFile) resources.get("binaryMovieDBFile")));
+        resources.put("indexByNameFileManager", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByNameFile")));
+        resources.put("indexByIdFileManager", new IndexByIdFileManager((RandomAccessFile) resources.get("binaryIndexByIdFile")));
+        resources.put("indexByGenreFileManager", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreFile")));
+        resources.put("indexByGenreMultlistFile", new IndexByNameFileManager((RandomAccessFile) resources.get("binaryIndexByGenreMultlistFile")));
 
         return resources;
     }
@@ -76,27 +76,13 @@ public class SearchController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
     }
 
-    @GetMapping("/getMovie")
-    public ResponseEntity<Movie> getMovie(@RequestParam("id") int id) {
-        try (RandomAccessFile binaryFile = new RandomAccessFile(FILE_PATH, "r")) {
-            MovieFileManager movieFileManager = new MovieFileManager(binaryFile);
-            Movie movie = movieFileManager.readMovie(id);
-
-            return movie != null ? ResponseEntity.ok(movie) :
-                    ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-
-        } catch (IOException e) {
-            return (ResponseEntity<Movie>) handleIOException(e);
-        }
-    }
-
     @GetMapping("/getMoviesByIds")
     public ResponseEntity<Map<String, Object>> getMoviesByIds(@RequestParam List<Integer> ids) {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            List<Movie> movies = movieFileManager.readMoviesByIds(new ArrayList<>(ids));
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
+            List<Movie> movies = movieDBFileManager.readMoviesByIds(new ArrayList<>(ids));
 
             Map<String, Object> response = new HashMap<>();
             response.put("records", movies);
@@ -118,8 +104,8 @@ public class SearchController {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            List<Movie> movies = movieFileManager.readAllMovies(page, size);
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
+            List<Movie> movies = movieDBFileManager.readAllMovies(page, size);
 
             Map<String, Object> response = new HashMap<>();
             response.put("records", movies);
@@ -140,17 +126,17 @@ public class SearchController {
         try {
             resources = initializeFiles();
 
-            IndexFileManager indexFileManager = (IndexFileManager) resources.get("indexFileManager");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
+            IndexByNameFileManager indexByNameFileManager = (IndexByNameFileManager) resources.get("indexByNameFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
 
-            int movieId = indexFileManager.findIdByMovieName(param);
+            int movieId = indexByNameFileManager.findIdByMovieName(param);
             if (movieId == -1) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
 
             long moviePosition = indexByIdFileManager.findPositionById(movieId);
             if (moviePosition == -1) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
 
-            Movie movie = movieFileManager.getMovieByPosition(moviePosition);
+            Movie movie = movieDBFileManager.getMovieByPosition(moviePosition);
             return ResponseEntity.ok(movie);
 
         } catch (IOException e) {
@@ -165,13 +151,13 @@ public class SearchController {
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
 
             long position = indexByIdFileManager.findPositionById(id);
             if (position == -1) return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
 
-            Movie movie = movieFileManager.getMovieByPosition(position);
+            Movie movie = movieDBFileManager.getMovieByPosition(position);
             return ResponseEntity.ok(movie);
 
         } catch (IOException e) {
@@ -187,12 +173,12 @@ public class SearchController {
         try {
             resources = initializeFiles();
 
-            MovieFileManager movieFileManager = (MovieFileManager) resources.get("movieFileManager");
-            IndexFileManager indexByGenreFileManager = (IndexFileManager) resources.get("indexByGenreFileManager");
-            IndexFileManager indexByGenreMultlistFile = (IndexFileManager) resources.get("indexByGenreMultlistFile");
-            IndexIdFileManager indexByIdFileManager = (IndexIdFileManager) resources.get("indexByIdFileManager");
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
+            IndexByNameFileManager indexByGenreFileManager = (IndexByNameFileManager) resources.get("indexByGenreFileManager");
+            IndexByNameFileManager indexByGenreMultlistFile = (IndexByNameFileManager) resources.get("indexByGenreMultlistFile");
+            IndexByIdFileManager indexByIdFileManager = (IndexByIdFileManager) resources.get("indexByIdFileManager");
 
-            List<Movie> movies = movieFileManager.readMoviesByGenre(genre, indexByGenreFileManager, indexByGenreMultlistFile, indexByIdFileManager);
+            List<Movie> movies = movieDBFileManager.readMoviesByGenre(genre, indexByGenreFileManager, indexByGenreMultlistFile, indexByIdFileManager);
 
             Map<String, Object> response = new HashMap<>();
             response.put("records", movies);
