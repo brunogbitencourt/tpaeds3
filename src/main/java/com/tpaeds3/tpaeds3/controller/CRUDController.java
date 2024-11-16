@@ -25,11 +25,13 @@ import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/CRUD")
-@Tag(name = "02 - Operações de Atualização de Banco : ")
+@Tag(name = "II - Operações de Atualização de Banco : ")
 public class CRUDController {
 
     private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
@@ -81,6 +83,9 @@ public class CRUDController {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
+    @Operation(summary = "Cria um novo filme no banco de dados")
+    @ApiResponse(responseCode = "201", description = "Filme criado com sucesso")
+    @ApiResponse(responseCode = "400", description = "Erro ao criar filme")
     @PostMapping("/createMovie")
     public ResponseEntity<Movie> createMovie(@RequestBody Movie movie) {
         Map<String, Object> resources = null;
@@ -120,6 +125,9 @@ public class CRUDController {
         }
     }
 
+    @Operation(summary = "Exclui um filme do banco de dados")
+    @ApiResponse(responseCode = "200", description = "Filme excluído com sucesso")
+    @ApiResponse(responseCode = "404", description = "Filme não encontrado")
     @DeleteMapping("/deleteMovie")
     public ResponseEntity<String> deleteMovie(@RequestParam("id") int id) {
         Map<String, Object> resources = null;
@@ -147,6 +155,9 @@ public class CRUDController {
         }
     }
 
+    @Operation(summary = "Atualiza um filme existente")
+    @ApiResponse(responseCode = "200", description = "Filme e índices atualizados com sucesso")
+    @ApiResponse(responseCode = "404", description = "Filme não encontrado")
     @PatchMapping("/updateMovie/{id}")
     public ResponseEntity<String> updateMovie(@PathVariable int id, @RequestBody Map<String, Object> updates) {
         Map<String, Object> resources = null;

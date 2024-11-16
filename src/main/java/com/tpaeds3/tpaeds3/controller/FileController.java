@@ -35,11 +35,12 @@ import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/FileCreation")
-@Tag(name = "01 - Criação do Banco de Dados: ")
+@Tag(name = "I - Criação do Banco de Dados: ")
 public class FileController {
 
     private static final String MOVIE_DB_PATH = "./src/main/java/com/tpaeds3/tpaeds3/files_out/movies.db";
@@ -132,6 +133,7 @@ public class FileController {
                 .body(resource);
     }
 
+    @Operation(summary = "Criação do banco de dados de filmes")
     @PostMapping("/createDatabase")
     public ResponseEntity<Resource> createDataBase(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
@@ -181,6 +183,7 @@ public class FileController {
         }
     }
 
+    @Operation(summary = "Baixar o banco de dados de filmes")
     @GetMapping("/getDatabase")
     public ResponseEntity<Resource> getDatabaseFile() {
         try {
@@ -190,6 +193,7 @@ public class FileController {
         }
     }
 
+    @Operation(summary = "Baixar o arquivo de índice de filmes por nome")
     @GetMapping("/getDatabaseIndex")
     public ResponseEntity<Resource> getIndexFile() {
         try {
