@@ -4,14 +4,14 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 
-public class IndexFileManager {
+public class IndexByNameFileManager {
 
     private RandomAccessFile indexFile;
     private static final byte VALID_RECORD = 0x01;
     private static final byte DELETED_RECORD = 0x00;
 
 
-    public IndexFileManager(RandomAccessFile indexFile){
+    public IndexByNameFileManager(RandomAccessFile indexFile){
         this.indexFile = indexFile;
     }
 
@@ -20,7 +20,7 @@ public class IndexFileManager {
     }
 
 
-    public long writeIndex(String key, int movieId) throws IOException {
+    public long writeIndex(String key, int movieId) throws IOException { // Byname
         try {
             int keyLength = key.getBytes(StandardCharsets.UTF_8).length;
             
@@ -58,7 +58,8 @@ public class IndexFileManager {
             // Lê a chave (nome do filme)
             String movieName = indexFile.readUTF();
     
-            // Lê o id do filme
+            // Lê o id do filme de trás pra frente
+            indexFile.seek(currentPointer + recordSize - 4); // Acança ao final do registro e volta 1 byte para pegar o id
             int movieId = indexFile.readInt();
     
             // Posição do próximo registro:
@@ -90,12 +91,13 @@ public class IndexFileManager {
     
             // Lê o id do filme 
             @SuppressWarnings("unused")
-            int position = indexFile.readInt();
+            int id = indexFile.readInt();
     
             // Se o registro for válido e a chave for igual, retorne a posição
             if (recordStatus == VALID_RECORD && movieName.equals(key)) {
                 // Retorna a posição do início do registro
-                return indexFile.getFilePointer() - (Integer.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2 + 4 + 1);
+                long position = indexFile.getFilePointer() - (Integer.BYTES + movieName.getBytes(StandardCharsets.UTF_8).length + 2 + 4 + 1);
+                return position;
             }
     
             // Move o ponteiro para o próximo registro
@@ -186,6 +188,10 @@ public class IndexFileManager {
         if (recordStatus != VALID_RECORD) {
             return false; // Registro não é válido, não pode ser atualizado
         }
+
+        // Lê o nome
+        String name = indexFile.readUTF();
+        int length = name.getBytes(StandardCharsets.UTF_8).length;
         
         // Lê o id do filme
         int movieId = indexFile.readInt();
@@ -203,11 +209,11 @@ public class IndexFileManager {
             // Cria um novo registro no final do arquivo
             writeIndex(newKey, movieId);
         } else {
-            indexFile.seek(position); // Volta para o início do registro atual
-            indexFile.writeByte(VALID_RECORD); // Escreve a lápide como válida
-            indexFile.writeInt(newRecordSize); // Atualiza o tamanho do registro
+            indexFile.seek(position + 5); // Volta para o início do registro atual
+            // indexFile.writeByte(VALID_RECORD); // Escreve a lápide como válida
+            // indexFile.writeInt(oldKeyLength); // Atualiza o tamanho do registro
             indexFile.writeUTF(newKey); // Escreve a nova chave
-            indexFile.writeInt(movieId); // Reescreve o id do filme
+            // indexFile.writeInt(movieId); // Reescreve o id do filme
         }
     
         return true;
