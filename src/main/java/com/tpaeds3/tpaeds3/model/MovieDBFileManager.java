@@ -20,9 +20,10 @@ public class MovieDBFileManager {
 
 
     private RandomAccessFile file;
+    private static final int HEADER_RECORD = 0xABCDEF12;    
     private static final byte VALID_RECORD = 0x01;
     private static final byte DELETED_RECORD = 0x00;
-
+    
     public MovieDBFileManager(RandomAccessFile file){
         this.file = file;
     }
@@ -45,6 +46,7 @@ public class MovieDBFileManager {
                 movie.setId(id); // Usa o ID fornecido
             }
 
+            
             // Parse objet to byte array
             byte[] movieBytes = movie.toByteArray();
 
@@ -52,6 +54,7 @@ public class MovieDBFileManager {
             file.seek(file.length());
             position =  file.length();
 
+            file.writeInt(HEADER_RECORD);
             // Write Valit Record
             file.writeByte(VALID_RECORD);
 
@@ -77,6 +80,7 @@ public class MovieDBFileManager {
         file.seek(4); // Pular o int do último ID
 
         while (file.getFilePointer() < file.length()) {
+            int headerRecord = file.readInt();
             byte recordStatus = file.readByte();
             int recordSize = file.readInt();
 
@@ -111,6 +115,7 @@ public class MovieDBFileManager {
         file.seek(4); // Pular o int do último ID
 
         while (file.getFilePointer() < file.length()) {
+            int headerRecord = file.readInt();
             byte recordStatus = file.readByte();
             int recordSize = file.readInt();
 
@@ -144,6 +149,7 @@ public class MovieDBFileManager {
         int count = 0;
 
         while (file.getFilePointer() < file.length() && count < end) {
+            int headerRecord = file.readInt();
             byte recordStatus = file.readByte();
             int recordSize = file.readInt();
             
@@ -173,8 +179,9 @@ public class MovieDBFileManager {
 
         while (file.getFilePointer() < file.length()) {
             long recordPosition = file.getFilePointer();
-            byte recordStatus = file.readByte();
 
+            int headerRecord = file.readInt();
+            byte recordStatus = file.readByte();
             int recordSize = file.readInt(); // Lê o tamanho do objeto Movie
 
             if (recordStatus == VALID_RECORD) {
@@ -206,6 +213,7 @@ public class MovieDBFileManager {
         Index index = null;
     
         while (file.getFilePointer() < file.length()) {
+            int headerRecord = file.readInt();
             long recordPosition = file.getFilePointer();
             byte recordStatus = file.readByte();
             int recordSize = file.readInt();
@@ -251,7 +259,7 @@ public class MovieDBFileManager {
     public  Movie getMovieByPosition(long position) throws IOException{
 
         file.seek(position);
-
+        int headerRecord = file.readInt();
         byte recordStatus = file.readByte();
         int recordSize = file.readInt();
 
@@ -297,7 +305,8 @@ public class MovieDBFileManager {
                     long indexPosition = indexByIdFileManager.findIndexPositionByKey(moveID);
                     long dbPosition = indexByIdFileManager.findDBPositionByIndexPosition(indexPosition + 13);
                     file.seek(dbPosition);
-
+                    
+                    int headerRecord = file.readInt();
                     byte recordStatus = file.readByte();
                     int recordSize = file.readInt();
 
