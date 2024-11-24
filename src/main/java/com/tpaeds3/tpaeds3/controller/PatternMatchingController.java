@@ -115,8 +115,21 @@ public class PatternMatchingController {
             kmpInfo.put("totalMovies", kmpPositions.size());
             algorithms.add(kmpInfo);
 
+            // Algoritmo 3: Aho-Corasick
+            long startTimeAhoCorasick = System.currentTimeMillis();
+            List<Long> ahoCorasickPositions = patternMatchingManager.findPatternOccurrencesWithAhoCorasick(List.of(pattern));
+            long endTimeAhoCorasick = System.currentTimeMillis();
+
+            Map<String, Object> ahoCorasickInfo = new HashMap<>();
+            ahoCorasickInfo.put("name", "Aho-Corasick");
+            ahoCorasickInfo.put("executionTime", (endTimeAhoCorasick - startTimeAhoCorasick) + " ms");
+            ahoCorasickInfo.put("totalMovies", ahoCorasickPositions.size());
+            algorithms.add(ahoCorasickInfo);
+
+            uniqueMarkerPositions.addAll(ahoCorasickPositions);
+
             // Adiciona as posições encontradas pelo KMP ao conjunto de marcadores únicos  
-            uniqueMarkerPositions.addAll(kmpPositions);
+            //uniqueMarkerPositions.addAll(kmpPositions);
     
             // Recupera os filmes a partir dos marcadores únicos
             for (Long position : uniqueMarkerPositions) {

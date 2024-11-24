@@ -202,4 +202,56 @@ public class PatternMatchingManager {
 
         return true;
     }
+
+
+    /**
+     * Busca múltiplos padrões no arquivo usando Aho-Corasick.
+     *
+     * @param patterns Lista de padrões a serem buscados.
+     * @return Lista de posições dos marcadores associados aos padrões encontrados.
+     * @throws IOException Se houver erro ao acessar o arquivo.
+     */
+    public List<Long> findPatternOccurrencesWithAhoCorasick(List<String> patterns) throws IOException {
+        Trie trie = new Trie();
+
+        // Adiciona os padrões à Trie
+        for (String pattern : patterns) {
+            trie.addPattern(pattern);
+        }
+
+        // Constrói os links de falha
+        trie.buildFailureLinks();
+
+        // Lê todo o conteúdo do arquivo em um buffer
+        long fileLength = file.length();
+        byte[] buffer = new byte[(int) fileLength];
+        file.seek(0);
+        file.readFully(buffer);
+
+        // Executa a busca
+        List<Long> markerPositions = new ArrayList<>();
+        Set<Long> uniqueMarkers = new HashSet<>();
+        NodeTrie current = trie.getRoot();
+
+        for (int i = 0; i < buffer.length; i++) {
+            while (current != trie.getRoot() && !current.children.containsKey(buffer[i])) {
+                current = current.failureLink; // Segue o link de falha
+            }
+
+            current = current.children.getOrDefault(buffer[i], trie.getRoot());
+
+            // Verifica se padrões foram encontrados neste nó
+            for (String pattern : current.output) {
+                System.out.printf("Padrão '%s' encontrado na posição %d%n", pattern, i - pattern.length() + 1);
+
+                // Encontra o marcador anterior
+                long markerPosition = findPreviousMarker(buffer, i - pattern.length() + 1);
+                if (markerPosition != -1 && uniqueMarkers.add(markerPosition)) {
+                    markerPositions.add(markerPosition);
+                }
+            }
+        }
+
+        return markerPositions;
+    }
 }
