@@ -24,6 +24,9 @@ import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
 import com.tpaeds3.tpaeds3.model.PatternMatchingManager;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
@@ -155,6 +158,80 @@ public class PatternMatchingController {
                 closeFiles(resources);
             }
         }
-    }    
+    }  
+    
+    @Operation(
+        summary = "Busca filmes com múltiplos padrões usando Aho-Corasick",
+        description = "Executa o algoritmo Aho-Corasick para encontrar múltiplos padrões e retorna os filmes associados."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Busca realizada com sucesso.", content = @Content(mediaType = "application/json")),
+            @ApiResponse(responseCode = "500", description = "Erro ao processar a solicitação.", content = @Content)
+    })
+    @GetMapping("/findMoviesByPatternsWithAhoCorasick")
+    public ResponseEntity<Map<String, Object>> findMoviesByPatternsWithAhoCorasick(
+            @RequestParam List<String> patterns // Lista de padrões fornecida pelo usuário
+    ) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        Map<String, Object> resources = null;
 
+        try {
+            // Inicializa os arquivos e gerenciadores necessários
+            resources = initializeFiles();
+            RandomAccessFile file = (RandomAccessFile) resources.get("binaryMovieDBFile");
+            MovieDBFileManager movieDBFileManager = (MovieDBFileManager) resources.get("movieDBFileManager");
+
+            List<Map<String, Object>> algorithms = new ArrayList<>();
+    
+            // Filmes encontrados (evitar duplicatas)
+            Set<Long> uniqueMarkerPositions = new HashSet<>();
+            List<Movie> movies = new ArrayList<>();
+    
+
+            // Cria o PatternMatchingManager
+            PatternMatchingManager patternMatchingManager = new PatternMatchingManager(file);
+
+            // Executa a busca com Aho-Corasick
+            //Map<String, Object> ahoCorasickResult = patternMatchingManager.findPatternOccurrencesWithAhoCorasick(patterns);
+            long startTimeAhoCorasick = System.currentTimeMillis();
+            List<Long> ahoCorasickPositions = patternMatchingManager.findPatternOccurrencesWithAhoCorasick(patterns);
+            long endTimeAhoCorasick = System.currentTimeMillis();
+
+
+            Map<String, Object> ahoCorasickInfo = new HashMap<>();
+            ahoCorasickInfo.put("name", "Aho-Corasick");
+            ahoCorasickInfo.put("executionTime", (endTimeAhoCorasick - startTimeAhoCorasick) + " ms");
+            ahoCorasickInfo.put("totalMovies", ahoCorasickPositions.size());
+            algorithms.add(ahoCorasickInfo);
+
+            uniqueMarkerPositions.addAll(ahoCorasickPositions);
+
+            // Adiciona as posições encontradas pelo KMP ao conjunto de marcadores únicos  
+            //uniqueMarkerPositions.addAll(kmpPositions);
+    
+            // Recupera os filmes a partir dos marcadores únicos
+            for (Long position : uniqueMarkerPositions) {
+                try {
+                    Movie movie = movieDBFileManager.getMovieByPosition(position);
+                    movies.add(movie);
+                } catch (Exception e) {
+                    System.err.printf("Erro ao recuperar filme na posição %d: %s%n", position, e.getMessage());
+                }
+            }
+    
+            response.put("algorithms", algorithms); // Informações dos algoritmos aparecem primeiro
+            response.put("movies", movies);         // Lista única de filmes encontrados
+
+            return ResponseEntity.ok(response);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            response.put("error", "Erro ao processar a solicitação: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
+        } finally {
+            if (resources != null) {
+                closeFiles(resources); // Fecha os arquivos utilizados
+            }
+        }
+    }
 }
