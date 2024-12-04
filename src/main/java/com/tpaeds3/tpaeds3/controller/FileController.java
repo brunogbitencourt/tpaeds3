@@ -31,6 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
+import com.tpaeds3.tpaeds3.model.AES;
 import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
@@ -135,9 +136,16 @@ public class FileController {
 
     @Operation(summary = "Criação do banco de dados de filmes")
     @PostMapping("/createDatabase")
-    public ResponseEntity<Resource> createDataBase(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Resource> createDataBase(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("aesKey") String aesKey) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(null);
+        }
+
+        if (aesKey == null || aesKey.length() != 16) {
+            return ResponseEntity.badRequest()
+                    .body(null); // Chave AES inválida, deve ter exatamente 16 caracteres
         }
 
         Map<String, Object> resources = null;
@@ -153,12 +161,24 @@ public class FileController {
             IndexByNameFileManager indexByGenreMultlistFile = (IndexByNameFileManager) resources
                     .get("indexByGenreMultlistFile");
 
+            // Cria uma instância da classe AES com a chave fornecida
+            AES aes = new AES(aesKey);
+
             List<Movie> movies = parseCSV(file);
             RandomAccessFile binaryMovieDBFile = (RandomAccessFile) resources.get("binaryMovieDBFile");
             binaryMovieDBFile.seek(0); // Cursor no início
             binaryMovieDBFile.writeInt(0); // Escreve o Header
 
             for (Movie movie : movies) {
+                // Criptografa cada membro do atributo 'crew' (lista de strings)
+                List<String> crew = movie.getCrew();
+                List<String> encryptedCrew = new ArrayList<>();
+                for (String member : crew) {
+                    String encryptedMember = aes.encrypt(member); // Criptografa o membro
+                    encryptedCrew.add(encryptedMember); // Adiciona à lista criptografada
+                }
+                movie.setCrew(encryptedCrew); // Substitui a lista original pela criptografada
+
                 long position = movieDBFileManager.writeMovie(movie);
                 int movieId = movie.getId();
                 long indexIdPosition = indexByIdFileManager.writeIndex(movieId, position);

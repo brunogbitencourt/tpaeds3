@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
+import com.tpaeds3.tpaeds3.model.AES;
 import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
@@ -184,7 +185,12 @@ public class SearchController {
             @ApiResponse(responseCode = "500", description = "Erro interno ao processar a solicitação.", content = @Content)
     })
     @GetMapping("/getMovieById")
-    public ResponseEntity<Movie> getMovieById(@RequestParam int id) {
+    public ResponseEntity<Movie> getMovieById(@RequestParam int id, @RequestParam("aesKey") String aesKey) {
+        // Validação da chave AES
+        if (aesKey == null || aesKey.length() != 16) {
+            return ResponseEntity.badRequest().body(null); // Chave AES inválida, deve ter exatamente 16 caracteres
+        }
+
         Map<String, Object> resources = null;
         try {
             resources = initializeFiles();
@@ -196,6 +202,19 @@ public class SearchController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
 
             Movie movie = movieDBFileManager.getMovieByPosition(position);
+
+            // Cria uma instância da classe AES para descriptografia
+            AES aes = new AES(aesKey);
+
+            // Descriptografa o atributo 'crew' (lista de strings)
+            List<String> encryptedCrew = movie.getCrew();
+            List<String> decryptedCrew = new ArrayList<>();
+            for (String encryptedMember : encryptedCrew) {
+                String decryptedMember = aes.decrypt(encryptedMember); // Descriptografa cada membro
+                decryptedCrew.add(decryptedMember); // Adiciona à lista descriptografada
+            }
+            movie.setCrew(decryptedCrew); // Substitui a lista criptografada pela descriptografada
+
             return ResponseEntity.ok(movie);
 
         } catch (IOException e) {
