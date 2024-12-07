@@ -15,11 +15,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
 import com.tpaeds3.tpaeds3.model.AES;
 import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
+import com.tpaeds3.tpaeds3.model.IndexByNameFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
+import com.tpaeds3.tpaeds3.model.VigenereCipher;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -185,10 +186,14 @@ public class SearchController {
             @ApiResponse(responseCode = "500", description = "Erro interno ao processar a solicitação.", content = @Content)
     })
     @GetMapping("/getMovieById")
-    public ResponseEntity<Movie> getMovieById(@RequestParam int id, @RequestParam("aesKey") String aesKey) {
+    public ResponseEntity<Movie> getMovieById(@RequestParam int id, @RequestParam("aesKey") String aesKey, @RequestParam("vigenereCipherKey") String vigenereCipherKey) {
         // Validação da chave AES
         if (aesKey == null || aesKey.length() != 16) {
             return ResponseEntity.badRequest().body(null); // Chave AES inválida, deve ter exatamente 16 caracteres
+        }
+
+        if (vigenereCipherKey == null) {
+            return ResponseEntity.badRequest().body(null); // Chave RSA inválida.
         }
 
         Map<String, Object> resources = null;
@@ -206,6 +211,9 @@ public class SearchController {
             // Cria uma instância da classe AES para descriptografia
             AES aes = new AES(aesKey);
 
+            // Cria uma instâncoa da classe RSA
+            VigenereCipher vigenereCipher = new VigenereCipher(vigenereCipherKey);
+
             // Descriptografa o atributo 'crew' (lista de strings)
             List<String> encryptedCrew = movie.getCrew();
             List<String> decryptedCrew = new ArrayList<>();
@@ -214,6 +222,11 @@ public class SearchController {
                 decryptedCrew.add(decryptedMember); // Adiciona à lista descriptografada
             }
             movie.setCrew(decryptedCrew); // Substitui a lista criptografada pela descriptografada
+
+            // Descriptografa o originTitle
+            String encryptedOriginTitle = movie.getOriginTitle();
+            String decryptedOriginTitle = vigenereCipher.decrypt(encryptedOriginTitle);
+            movie.setOriginTitle(decryptedOriginTitle);
 
             return ResponseEntity.ok(movie);
 

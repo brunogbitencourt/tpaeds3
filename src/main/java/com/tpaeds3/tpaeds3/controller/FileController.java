@@ -35,6 +35,7 @@ import com.tpaeds3.tpaeds3.model.AES;
 import com.tpaeds3.tpaeds3.model.IndexByIdFileManager;
 import com.tpaeds3.tpaeds3.model.Movie;
 import com.tpaeds3.tpaeds3.model.MovieDBFileManager;
+import com.tpaeds3.tpaeds3.model.VigenereCipher;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -138,7 +139,8 @@ public class FileController {
     @PostMapping("/createDatabase")
     public ResponseEntity<Resource> createDataBase(
             @RequestParam("file") MultipartFile file,
-            @RequestParam("aesKey") String aesKey) {
+            @RequestParam("aesKey") String aesKey,
+            @RequestParam("vigenereCipherKey") String vigenereCipherKey) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(null);
         }
@@ -164,6 +166,9 @@ public class FileController {
             // Cria uma instância da classe AES com a chave fornecida
             AES aes = new AES(aesKey);
 
+            // Cria uma instância da classe VigenereCipher
+            VigenereCipher vigenereCipher = new VigenereCipher(vigenereCipherKey);
+
             List<Movie> movies = parseCSV(file);
             RandomAccessFile binaryMovieDBFile = (RandomAccessFile) resources.get("binaryMovieDBFile");
             binaryMovieDBFile.seek(0); // Cursor no início
@@ -178,6 +183,11 @@ public class FileController {
                     encryptedCrew.add(encryptedMember); // Adiciona à lista criptografada
                 }
                 movie.setCrew(encryptedCrew); // Substitui a lista original pela criptografada
+
+                // Criptografa o origin title de cada filme
+                String originTitle = movie.getOriginTitle();
+                String encryptedOriginTitle = vigenereCipher.encrypt(originTitle); // Criptografa o title
+                movie.setOriginTitle(encryptedOriginTitle); // Substitui pelo title criptografado               
 
                 long position = movieDBFileManager.writeMovie(movie);
                 int movieId = movie.getId();
